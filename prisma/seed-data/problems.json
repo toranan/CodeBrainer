@@ -1,0 +1,75 @@
+{
+  "title": "같은 숫자는 싫어",
+  "slug": "remove-consecutive-duplicates",
+  "difficulty": "BRONZE",
+  "categories": ["Array", "Implementation"],
+  "statement": "배열 arr가 주어집니다. 배열 arr의 각 원소는 숫자 0부터 9까지로 이루어져 있습니다. 이때, 배열 arr에서 연속적으로 나타나는 숫자는 하나만 남기고 전부 제거하려고 합니다. 단, 제거된 후 남은 수들을 반환할 때는 배열 arr의 원소들의 순서를 유지해야 합니다.\n\narr = [1, 1, 3, 3, 0, 1, 1] 이면 [1, 3, 0, 1] 을 return 합니다.\narr = [4, 4, 4, 3, 3] 이면 [4, 3] 을 return 합니다.\n배열 arr에서 연속적으로 나타나는 숫자는 제거하고 남은 수들을 return 하는 solution 함수를 완성해 주세요.",
+  "ioSample": {
+    "inputFormat": "solution 함수는 정수 배열 arr(0~9)을 인자로 받는다.",
+    "outputFormat": "연속 중복을 제거한 배열을 반환한다.",
+    "samples": [
+      {
+        "input": "[[1,1,3,3,0,1,1]]",
+        "output": "[1,3,0,1]",
+        "explanation": "연속 구간마다 첫 번째 값만 남깁니다."
+      },
+      {
+        "input": "[[4,4,4,3,3]]",
+        "output": "[4,3]",
+        "explanation": "모두 같은 값도 동일하게 처리됩니다."
+      }
+    ],
+    "notes": "배열 크기는 최대 1,000,000이므로 O(n) 풀이가 요구됩니다."
+  },
+  "constraints": "- 1 ≤ arr.length ≤ 1,000,000\n- 0 ≤ arr[i] ≤ 9",
+  "languages": ["JAVASCRIPT"],
+  "hints": [
+    {
+      "stage": 1,
+      "title": "덩어리를 찾아라",
+      "content": "이 문제는 \"같은 값이 연속해서 붙은 구간\"을 한 덩어리로 보고, 각 덩어리에서 첫 번째 값만 남긴다고 생각해 보자. 그러면 무엇을 기준으로 덩어리의 시작을 알아볼 수 있을까?",
+      "waitSeconds": 60
+    },
+    {
+      "stage": 2,
+      "title": "한 번의 순회",
+      "content": "배열을 왼쪽에서 오른쪽으로 한 번 훑는 동안, 방금 결과에 넣었던 값(또는 바로 직전 값)과 현재 값을 비교하면 덩어리의 시작인지 아닌지를 구분할 수 있다. 맨 처음 원소는 어떤 경우에 결과에 포함되어야 할까?",
+      "waitSeconds": 120
+    },
+    {
+      "stage": 3,
+      "title": "엣지 케이스",
+      "content": "입력이 최대 10^6개이므로 한 번 순회(O(n))로 끝나는 방법이 바람직하다. \"모두 같은 값\", \"하나만 있는 경우\", \"값이 번갈아 나오는 경우\" 같은 엣지 케이스에서 네가 생각한 규칙이 항상 맞게 동작하는지 머릿속으로 시뮬레이션해 보자.",
+      "waitSeconds": 180
+    }
+  ],
+  "solutions": [
+    {
+      "language": "JAVASCRIPT",
+      "code": "function solution(arr) {\n  const answer = [];\n  let prev = null;\n  for (const value of arr) {\n    if (prev !== value) {\n      answer.push(value);\n      prev = value;\n    }\n  }\n  return answer;\n}",
+      "note": "인접한 값과 비교하며 첫 값만 채택합니다."
+    }
+  ],
+  "testcases": [
+    { "input": "[[1,1,3,3,0,1,1]]", "output": "[1,3,0,1]", "isHidden": false },
+    { "input": "[[4,4,4,3,3]]", "output": "[4,3]", "isHidden": false },
+    { "input": "[[7]]", "output": "[7]", "isHidden": true },
+    { "input": "[[0,0,0,0,0]]", "output": "[0]", "isHidden": true },
+    { "input": "[[1,2,3,4,5]]", "output": "[1,2,3,4,5]", "isHidden": true },
+    { "input": "[[5,5,4,4,3,3,2,2,1,1,0,0]]", "output": "[5,4,3,2,1,0]", "isHidden": true },
+    { "input": "[[1,1,1,2,2,3,3,3,2,2,1,1]]", "output": "[1,2,3,2,1]", "isHidden": true },
+    { "input": "[[9,8,8,8,7,7,9,9,0,0,1,1,1]]", "output": "[9,8,7,9,0,1]", "isHidden": true },
+    { "input": "[[0,1,0,1,0,1,0,1]]", "output": "[0,1,0,1,0,1,0,1]", "isHidden": true },
+    { "input": "[[2,2,2,2,3,3,4,4,4,5,5,5,5,5]]", "output": "[2,3,4,5]", "isHidden": true },
+    { "input": "[[9,9,0,1,2,3,3,3,4,4,5,6,7,7,8,9,9]]", "output": "[9,0,1,2,3,4,5,6,7,8,9]", "isHidden": true },
+    { "input": "[[1,0,0,0,0,1,1,1,0,0,2,2,2,2,2,3,3,3]]", "output": "[1,0,1,0,2,3]", "isHidden": true },
+    { "input": "[[3,3,3,3,3,2,2,2,1,1,1,0,0,0,0]]", "output": "[3,2,1,0]", "isHidden": true },
+    { "input": "[[0,1,1,1,1,1,1,2,3,3,4,4,4,4,5,6,6,6,7]]", "output": "[0,1,2,3,4,5,6,7]", "isHidden": true },
+    { "input": "[[8,8,8,8,8,8,8,8,8]]", "output": "[8]", "isHidden": true },
+    { "input": "[[1,2,2,2,2,2,2,2,2,2,3]]", "output": "[1,2,3]", "isHidden": true },
+    { "input": "[[0,9,9,9,0,0,0,9,9,0,0,9]]", "output": "[0,9,0,9,0,9]", "isHidden": true },
+    { "input": "[[5,4,4,5,5,4,4,4,5,5,5,4,4,5]]", "output": "[5,4,5,4,5,4,5]", "isHidden": true },
+    { "input": "[[2,3,2,3,2,3,2,3,3,2,2,3,3,3]]", "output": "[2,3,2,3,2,3,2,3,2,3]", "isHidden": true },
+    { "input": "[[1,1,2,2,1,1,2,2,1,1,2,2]]", "output": "[1,2,1,2,1,2]", "isHidden": true }
+  ]
+}
