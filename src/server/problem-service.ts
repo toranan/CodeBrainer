@@ -2,7 +2,7 @@ import seedProblem from "@/../prisma/seed-data/problems.json";
 
 // We avoid importing Prisma modules when the client hasn't been generated (e.g. DB not set up).
 // Lazy-load the client to keep the app working with seed data only.
-let prisma: any;
+let prisma: typeof import("@/lib/prisma")["prisma"] | null = null;
 
 async function getPrismaClient() {
   if (prisma) return prisma;
@@ -10,7 +10,7 @@ async function getPrismaClient() {
     const { prisma: client } = await import("@/lib/prisma");
     prisma = client;
     return prisma;
-  } catch (error) {
+  } catch {
     console.warn("Prisma client 사용 불가. Seed 데이터를 사용합니다.");
     return null;
   }
@@ -27,6 +27,18 @@ import type {
 type SeedProblem = typeof seedProblem;
 
 const SEED_PROBLEMS: SeedProblem[] = [seedProblem];
+
+interface ProblemSummary {
+  id: string;
+  title: string;
+  slug: string;
+  difficulty: ProblemDetail["difficulty"];
+  categories: string[];
+  statement: string;
+  languages: SupportedLanguage[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
   "C",
@@ -271,6 +283,64 @@ export async function fetchProblemFullByIdOrSlug(
   return null;
 }
 
+export async function fetchProblemSummaries(): Promise<ProblemSummary[]> {
+  const client = await getPrismaClient();
+  if (client) {
+    try {
+      const problems = await client.problem.findMany({
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          difficulty: true,
+          categories: true,
+          statement: true,
+          languages: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return problems.map((problem) => ({
+        id: problem.id,
+        title: problem.title,
+        slug: problem.slug,
+        difficulty: problem.difficulty,
+        categories: problem.categories ?? [],
+        statement: problem.statement,
+        languages: Array.isArray(problem.languages)
+          ? (problem.languages.map((lang: string) => toSupportedLanguage(lang)) as SupportedLanguage[])
+          : (["PYTHON"] as SupportedLanguage[]),
+        createdAt:
+          typeof problem.createdAt === "string"
+            ? problem.createdAt
+            : problem.createdAt?.toISOString() ?? new Date().toISOString(),
+        updatedAt:
+          typeof problem.updatedAt === "string"
+            ? problem.updatedAt
+            : problem.updatedAt?.toISOString() ?? new Date().toISOString(),
+      }));
+    } catch (error) {
+      console.warn("Prisma 연결에 실패했습니다. Seed 데이터를 사용합니다.", error);
+    }
+  }
+
+  return SEED_PROBLEMS.map((problem) => ({
+    id: problem.slug,
+    title: problem.title,
+    slug: problem.slug,
+    difficulty: problem.difficulty as ProblemDetail["difficulty"],
+    categories: problem.categories ?? [],
+    statement: problem.statement,
+    languages: Array.isArray(problem.languages)
+      ? (problem.languages.map((lang) => toSupportedLanguage(lang)) as SupportedLanguage[])
+      : (["PYTHON"] as SupportedLanguage[]),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }));
+}
+
 export async function fetchHintByProblemStage(
   idOrSlug: string,
   stage: number,
@@ -281,7 +351,7 @@ export async function fetchHintByProblemStage(
   return full.detail.hints.find((hint) => hint.stage === stage) ?? null;
 }
 
-export type { TestcaseData };
+export type { TestcaseData, ProblemSummary };
 
 
 

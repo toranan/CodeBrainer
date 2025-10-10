@@ -68,9 +68,7 @@ interface ProblemWorkspaceProps {
 
 const defaultSnippet = `// TODO: 여기에 코드를 작성하세요.`;
 
-const SECTION_CONFIG = [{ key: "statement", label: "문제 설명", icon: "📝" }] as const;
-
-type SectionKey = (typeof SECTION_CONFIG)[number]["key"];
+type SectionKey = "statement";
 
 export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<"statement" | "hints">("statement");
