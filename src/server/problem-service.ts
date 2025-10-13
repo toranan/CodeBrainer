@@ -1,4 +1,9 @@
 import seedProblem from "@/../prisma/seed-data/problems.json";
+import {
+  orchestratorFetch,
+  type OrchestratorProblemDetail,
+  type OrchestratorProblemSummary,
+} from "@/server/orchestrator-client";
 
 // We avoid importing Prisma modules when the client hasn't been generated (e.g. DB not set up).
 // Lazy-load the client to keep the app working with seed data only.
@@ -28,7 +33,7 @@ type SeedProblem = typeof seedProblem;
 
 const SEED_PROBLEMS: SeedProblem[] = [seedProblem];
 
-interface ProblemSummary {
+export interface ProblemSummary {
   id: string;
   title: string;
   slug: string;
@@ -100,16 +105,17 @@ function normalizeHints(hints: unknown): ProblemHint[] {
     .filter(Boolean) as ProblemHint[];
 }
 
-function normalizeSolutions(solutions: unknown): ProblemSolutionSummary[] {
+function normalizeSolutions(solutions: unknown, slug?: string): ProblemSolutionSummary[] {
   if (!Array.isArray(solutions)) return [];
   return solutions
-    .map((solution) => {
+    .map((solution, index) => {
       if (!solution || typeof solution !== "object") return null;
       const s = solution as Record<string, unknown>;
       if (typeof s.language !== "string") return null;
+      const language = toSupportedLanguage(s.language);
       return {
-        id: typeof s.id === "string" ? s.id : undefined,
-        language: toSupportedLanguage(s.language),
+        id: typeof s.id === "string" ? s.id : `${slug ?? "sol"}-${language}-${index}`,
+        language,
         note: typeof s.note === "string" ? s.note : undefined,
       } satisfies ProblemSolutionSummary;
     })
@@ -147,10 +153,7 @@ function normalizeProblemDetail(data: {
       ...hint,
       id: hint.id ?? `${data.slug}-hint-${hint.stage ?? index + 1}`,
     })),
-    solutions: normalizeSolutions(data.solutions).map((solution, index) => ({
-      ...solution,
-      id: solution.id ?? `${data.slug}-sol-${solution.language}-${index}`,
-    })),
+    solutions: normalizeSolutions(data.solutions, data.slug),
     createdAt:
       typeof data.createdAt === "string"
         ? data.createdAt
@@ -187,7 +190,7 @@ function normalizeTestcases(testcases: unknown, slug: string): TestcaseData[] {
     .filter(Boolean) as TestcaseData[];
 }
 
-function getSeedProblemBySlug(slug: string): { detail: ProblemDetail; testcases: TestcaseData } | null {
+function getSeedProblemBySlug(slug: string): { detail: ProblemDetail; testcases: TestcaseData[] } | null {
   const seed = SEED_PROBLEMS.find((problem) => problem.slug === slug);
   if (!seed) return null;
 
@@ -197,7 +200,7 @@ function getSeedProblemBySlug(slug: string): { detail: ProblemDetail; testcases:
   });
   const testcases = normalizeTestcases(seed.testcases, seed.slug);
 
-  return { detail, testcases } as { detail: ProblemDetail; testcases: TestcaseData };
+  return { detail, testcases };
 }
 
 async function getPrismaProblemBySlug(slug: string) {
@@ -219,7 +222,7 @@ async function getPrismaProblemBySlug(slug: string) {
     const detail = normalizeProblemDetail(problem);
     const testcases = normalizeTestcases(problem.testcases, problem.slug);
 
-    return { detail, testcases } as { detail: ProblemDetail; testcases: TestcaseData };
+    return { detail, testcases };
   } catch (error) {
     console.warn("Prisma 연결에 실패했습니다. Seed 데이터를 사용합니다.", error);
     return null;
@@ -245,7 +248,7 @@ async function getPrismaProblemById(id: string) {
     const detail = normalizeProblemDetail(problem);
     const testcases = normalizeTestcases(problem.testcases, problem.slug);
 
-    return { detail, testcases } as { detail: ProblemDetail; testcases: TestcaseData };
+    return { detail, testcases };
   } catch (error) {
     console.warn("Prisma 연결에 실패했습니다. Seed 데이터를 사용합니다.", error);
     return null;
@@ -253,6 +256,13 @@ async function getPrismaProblemById(id: string) {
 }
 
 export async function fetchProblemDetailBySlug(slug: string): Promise<ProblemDetail | null> {
+  try {
+    const detail = await orchestratorFetch<OrchestratorProblemDetail>(`/api/problems/${slug}`);
+    return mapOrchestratorDetailToProblem(detail).detail;
+  } catch (error) {
+    console.warn("Orchestrator 문제 상세 호출 실패. Prisma/seed로 대체합니다.", error);
+  }
+
   const prismaProblem = await getPrismaProblemBySlug(slug);
   if (prismaProblem) {
     return prismaProblem.detail;
@@ -265,6 +275,13 @@ export async function fetchProblemDetailBySlug(slug: string): Promise<ProblemDet
 export async function fetchProblemFullByIdOrSlug(
   idOrSlug: string,
 ): Promise<{ detail: ProblemDetail; testcases: TestcaseData[] } | null> {
+  try {
+    const detail = await orchestratorFetch<OrchestratorProblemDetail>(`/api/problems/${idOrSlug}`);
+    return mapOrchestratorDetailToProblem(detail);
+  } catch (error) {
+    console.warn("Orchestrator 문제 풀 호출 실패. Prisma/seed로 대체합니다.", error);
+  }
+
   const prismaProblem = await getPrismaProblemById(idOrSlug);
   if (prismaProblem) {
     return prismaProblem;
@@ -284,6 +301,25 @@ export async function fetchProblemFullByIdOrSlug(
 }
 
 export async function fetchProblemSummaries(): Promise<ProblemSummary[]> {
+  try {
+    const summaries = await orchestratorFetch<OrchestratorProblemSummary[]>("/api/problems");
+    return summaries.map((summary) => ({
+      id: String(summary.id),
+      title: summary.title,
+      slug: summary.slug,
+      difficulty: (summary.tier?.toUpperCase?.() ?? "BRONZE") as ProblemDetail["difficulty"],
+      categories: summary.categories ?? [],
+      statement: summary.statement ?? "",
+      languages: Array.isArray(summary.languages)
+        ? (summary.languages.map((lang) => toSupportedLanguage(lang)) as SupportedLanguage[])
+        : (["PYTHON"] as SupportedLanguage[]),
+      createdAt: summary.createdAt,
+      updatedAt: summary.updatedAt,
+    }));
+  } catch (error) {
+    console.warn("Orchestrator 요약 호출 실패. Prisma/seed로 대체합니다.", error);
+  }
+
   const client = await getPrismaClient();
   if (client) {
     try {
@@ -351,7 +387,59 @@ export async function fetchHintByProblemStage(
   return full.detail.hints.find((hint) => hint.stage === stage) ?? null;
 }
 
-export type { TestcaseData, ProblemSummary };
+export type { TestcaseData };
+
+function mapOrchestratorDetailToProblem(detail: OrchestratorProblemDetail): {
+  detail: ProblemDetail;
+  testcases: TestcaseData[];
+} {
+  const visibleSamples = Array.isArray(detail.samples)
+    ? detail.samples.filter((sample) => sample.hidden === false)
+    : [];
+
+  const hints = detail.hints.map((hint, index) => ({
+    id: `${detail.slug}-hint-${hint.stage ?? index + 1}`,
+    stage: hint.stage,
+    title: hint.title,
+    content: hint.contentMd,
+    waitSeconds: hint.waitSeconds,
+  }));
+
+  const testcases = detail.testcases.map((testcase, index) => ({
+    id: String(testcase.id ?? `${detail.slug}-tc-${index + 1}`),
+    input: testcase.input ?? "",
+    output: testcase.output ?? "",
+    isHidden: testcase.hidden,
+  }));
+
+  const mappedDetail: ProblemDetail = {
+    id: String(detail.id),
+    title: detail.title,
+    slug: detail.slug,
+    difficulty: (detail.tier?.toUpperCase?.() ?? "BRONZE") as ProblemDetail["difficulty"],
+    categories: detail.categories ?? [],
+    statement: detail.statement,
+    ioSample: {
+      inputFormat: detail.inputFormat ?? undefined,
+      outputFormat: detail.outputFormat ?? undefined,
+      samples: visibleSamples.map((sample) => ({
+        input: sample.input ?? "",
+        output: sample.output ?? "",
+        explanation: sample.explanation ?? undefined,
+      })),
+    },
+    constraints: detail.constraints ?? undefined,
+    languages: Array.isArray(detail.languages)
+      ? (detail.languages.map((lang) => toSupportedLanguage(lang)) as SupportedLanguage[])
+      : (["PYTHON"] as SupportedLanguage[]),
+    hints,
+    solutions: [],
+    createdAt: detail.createdAt,
+    updatedAt: detail.updatedAt,
+  };
+
+  return { detail: mappedDetail, testcases };
+}
 
 
 
