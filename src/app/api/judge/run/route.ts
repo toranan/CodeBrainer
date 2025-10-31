@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server"
-import vm from "vm"
 
 import { fetchProblemFullByIdOrSlug } from "@/server/problem-service"
+import {
+  createBatchSubmissions,
+  LANGUAGE_ID_MAP,
+  mapStatusToVerdict,
+  waitForBatchSubmissions,
+  type Judge0Submission,
+} from "@/server/judge0-client"
 
 interface RunRequest {
   problemId: string
@@ -14,16 +20,18 @@ export async function POST(request: Request) {
   const body = (await request.json()) as RunRequest
 
   if (!body.problemId || !body.code) {
-    return NextResponse.json(
-      { error: "problemId와 code는 필수입니다." },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: "problemId와 code는 필수입니다." }, { status: 400 })
   }
 
-  if ((body.language ?? "").toUpperCase() !== "JAVASCRIPT") {
+  const languageUpper = (body.language ?? "").toUpperCase()
+  const languageId = LANGUAGE_ID_MAP[languageUpper]
+
+  if (!languageId) {
     return NextResponse.json(
-      { error: "현재는 JavaScript만 지원합니다." },
-      { status: 400 }
+      {
+        error: `지원하지 않는 언어입니다: ${body.language}. 지원 언어: ${Object.keys(LANGUAGE_ID_MAP).join(", ")}`,
+      },
+      { status: 400 },
     )
   }
 
@@ -33,93 +41,81 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "문제를 찾을 수 없습니다." }, { status: 404 })
   }
 
-  const scriptContent = `${body.code}\n;typeof solution === 'function' ? solution : module?.exports?.solution`
+  // run 모드일 경우 첫 번째 테스트케이스만, submit 모드일 경우 모든 테스트케이스
+  const testcasesToRun =
+    body.mode === "run" ? problem.testcases.slice(0, 1) : problem.testcases
 
-  let solution: ((...args: unknown[]) => unknown) | null = null
-  let compileError: string | null = null
+  // Judge0 제출 생성
+  const submissions: Judge0Submission[] = testcasesToRun.map((testcase) => ({
+    source_code: body.code,
+    language_id: languageId,
+    stdin: testcase.input,
+    expected_output: testcase.output,
+    cpu_time_limit: 2.0, // 2초
+    wall_time_limit: 5.0, // 5초
+    memory_limit: 256000, // 256MB (kilobytes)
+  }))
 
   try {
-    const context = vm.createContext({ module: { exports: {} }, exports: {} })
-    const script = new vm.Script(scriptContent, {
-      timeout: 1000,
-    })
-    const exported = script.runInContext(context, { timeout: 1000 })
-    const candidate = exported ?? context.module?.exports?.solution ?? context.solution
-    if (typeof candidate !== "function") {
-      throw new Error("solution 함수를 찾을 수 없습니다.")
-    }
-    solution = candidate as (...args: unknown[]) => unknown
-  } catch (error) {
-    compileError = error instanceof Error ? error.message : String(error)
-  }
+    // 배치 제출 생성
+    const tokens = await createBatchSubmissions(submissions)
 
-  if (!solution) {
+    // 결과 대기 (최대 30초)
+    const judge0Results = await waitForBatchSubmissions(
+      tokens.map((t) => t.token),
+      30,
+      1000,
+    )
+
+    // 결과 변환
+    const results = judge0Results.map((result, index) => {
+      const verdict = mapStatusToVerdict(result.status.id)
+      const testcase = testcasesToRun[index]
+
+      return {
+        testcaseId: testcase.id,
+        verdict,
+        timeMs: result.time ? Math.round(parseFloat(result.time) * 1000) : 0,
+        memoryKb: result.memory ?? 0,
+        stderr: result.stderr ?? result.message ?? undefined,
+        stdout: result.stdout ?? undefined,
+        compileOutput: result.compile_output ?? undefined,
+      }
+    })
+
+    // 전체 상태 결정
+    let finalStatus = "AC"
+    const hasCompileError = results.some((r) => r.verdict === "CE")
+    const hasRuntimeError = results.some((r) => r.verdict === "RE")
+    const hasWrongAnswer = results.some((r) => r.verdict === "WA")
+    const hasTimeLimitExceeded = results.some((r) => r.verdict === "TLE")
+
+    if (hasCompileError) {
+      finalStatus = "CE"
+    } else if (hasRuntimeError) {
+      finalStatus = "RE"
+    } else if (hasTimeLimitExceeded) {
+      finalStatus = "TLE"
+    } else if (hasWrongAnswer) {
+      finalStatus = "WA"
+    }
+
+    // 컴파일 로그 추출
+    const compileLog = results.find((r) => r.compileOutput)?.compileOutput
+
+    return NextResponse.json({
+      status: finalStatus,
+      results,
+      compileLog,
+    })
+  } catch (error) {
+    console.error("Judge0 채점 오류:", error)
     return NextResponse.json(
       {
-        status: "CE",
-        results: [],
-        compileLog: compileError ?? "solution 함수를 찾을 수 없습니다.",
+        error: "채점 중 오류가 발생했습니다.",
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: 200 }
+      { status: 500 },
     )
   }
-
-  const results = [] as {
-    testcaseId: string
-    verdict: string
-    timeMs: number
-    memoryKb: number
-    stderr?: string
-  }[]
-
-  let hasWrong = false
-
-  for (const testcase of problem.testcases) {
-    let verdict = "AC"
-    let stderr: string | undefined
-    const start = performance.now()
-
-    try {
-      const inputArgs = JSON.parse(testcase.input) as unknown[]
-      const expected = JSON.stringify(JSON.parse(testcase.output))
-      const output = solution(...inputArgs)
-      const received = JSON.stringify(output)
-      if (received !== expected) {
-        verdict = "WA"
-        hasWrong = true
-        stderr = `기대값: ${expected}, 실제값: ${received}`
-      }
-    } catch (error) {
-      verdict = "RE"
-      hasWrong = true
-      stderr = error instanceof Error ? error.message : String(error)
-    }
-
-    const end = performance.now()
-    results.push({
-      testcaseId: testcase.id,
-      verdict,
-      timeMs: Math.round(end - start),
-      memoryKb: 0,
-      stderr,
-    })
-
-    if (body.mode === "run" && verdict !== "AC") {
-      break
-    }
-  }
-
-  const finalStatus = compileError
-    ? "CE"
-    : hasWrong
-    ? results.find((item) => item.verdict === "RE")
-      ? "RE"
-      : "WA"
-    : "AC"
-
-  return NextResponse.json({
-    status: finalStatus,
-    results,
-    compileLog: compileError ?? undefined,
-  })
 }

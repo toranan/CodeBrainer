@@ -68,7 +68,7 @@ interface ProblemWorkspaceProps {
 
 const defaultSnippet = `// TODO: 여기에 코드를 작성하세요.`;
 
-type SectionKey = "statement";
+type SectionKey = "statement" | "hints";
 
 export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<"statement" | "hints">("statement");
@@ -302,7 +302,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           ...prev,
           [hint.stage]: {
             status: "cooldown",
-            nextAvailable: Date.now() + data.remainingSeconds * 1000,
+            nextAvailable: Date.now() + (data.remainingSeconds ?? 0) * 1000,
           },
         }));
       } else {

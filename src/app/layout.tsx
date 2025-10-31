@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 async function AppShell({ children }: { children: ReactNode }) {
   // const session = await auth();
-  const session = null; // DB 없이 실행하기 위한 임시 처리
+  // const session: { user?: { name?: string; email?: string } } | null = null; // DB 없이 실행하기 위한 임시 처리
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -49,20 +49,11 @@ async function AppShell({ children }: { children: ReactNode }) {
               관리자 콘솔
             </Link>
           </nav>
-          {session?.user ? (
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span>{session.user.name ?? session.user.email}</span>
-              <Link href="/api/auth/signout" className="text-primary hover:underline">
-                로그아웃
-              </Link>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <Link href="/auth/signin" className="hover:text-primary">
-                로그인
-              </Link>
-            </div>
-          )}
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Link href="/auth/signin" className="hover:text-primary">
+              로그인
+            </Link>
+          </div>
         </div>
       </header>
       <main className="flex-1 bg-gradient-to-b from-slate-50 via-white to-slate-50">

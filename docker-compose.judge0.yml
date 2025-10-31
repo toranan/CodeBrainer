@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-server
+    restart: always
+    ports:
+      - "2358:2358"
+    privileged: true
+    environment:
+      - REDIS_HOST=judge0-redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=judge0-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=judge0
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=YourJudge0Password
+      - ENABLE_WAIT_RESULT=true
+      - ENABLE_COMPILER_OPTIONS=true
+      - ALLOWED_LANGUAGES_FOR_COMPILE_OPTIONS=44,45,46,47,48,49,50,51,52,53,54
+      - MAX_QUEUE_SIZE=1000
+      - MAX_CPU_TIME_LIMIT=15
+      - MAX_WALL_TIME_LIMIT=30
+      - MAX_MEMORY_LIMIT=512000
+      - MAX_PROCESSES_AND_OR_THREADS=120
+      - MAX_FILE_SIZE=1024
+      - ENABLE_PER_PROCESS_AND_THREAD_TIME_LIMIT=false
+      - ENABLE_PER_PROCESS_AND_THREAD_MEMORY_LIMIT=false
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    volumes:
+      - ./judge0-data:/var/local/judge0
+
+  judge0-workers:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-workers
+    restart: always
+    privileged: true
+    command: ["./scripts/workers"]
+    environment:
+      - REDIS_HOST=judge0-redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=judge0-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=judge0
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=YourJudge0Password
+      - MAX_QUEUE_SIZE=1000
+      - MAX_CPU_TIME_LIMIT=15
+      - MAX_WALL_TIME_LIMIT=30
+      - MAX_MEMORY_LIMIT=512000
+      - MAX_PROCESSES_AND_OR_THREADS=120
+      - MAX_FILE_SIZE=1024
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    volumes:
+      - ./judge0-data:/var/local/judge0
+
+  judge0-db:
+    image: postgres:13
+    container_name: judge0-db
+    restart: always
+    environment:
+      - POSTGRES_DB=judge0
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=YourJudge0Password
+    volumes:
+      - judge0-postgres-data:/var/lib/postgresql/data
+
+  judge0-redis:
+    image: redis:6
+    container_name: judge0-redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - judge0-redis-data:/data
+
+volumes:
+  judge0-postgres-data:
+  judge0-redis-data:
