@@ -38,8 +38,6 @@ services:
       POSTGRES_PASSWORD: codebrainer
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U codebrainer -d codebrainer"]
       interval: 10s
