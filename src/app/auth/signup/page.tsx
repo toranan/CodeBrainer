@@ -16,16 +16,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function SignInPage() {
+export default function SignUpPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    confirmPassword: "",
+    name: "",
   });
   const [errors, setErrors] = useState({
     email: "",
     password: "",
+    confirmPassword: "",
+    name: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,7 +39,7 @@ export default function SignInPage() {
   };
 
   const validate = (): boolean => {
-    const newErrors = { email: "", password: "" };
+    const newErrors = { email: "", password: "", confirmPassword: "", name: "" };
     let isValid = true;
 
     if (!formData.email) {
@@ -48,6 +52,22 @@ export default function SignInPage() {
 
     if (!formData.password) {
       newErrors.password = "비밀번호는 필수입니다";
+      isValid = false;
+    } else if (formData.password.length < 8) {
+      newErrors.password = "비밀번호는 최소 8자 이상이어야 합니다";
+      isValid = false;
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "비밀번호 확인은 필수입니다";
+      isValid = false;
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "비밀번호가 일치하지 않습니다";
+      isValid = false;
+    }
+
+    if (!formData.name) {
+      newErrors.name = "이름은 필수입니다";
       isValid = false;
     }
 
@@ -62,42 +82,31 @@ export default function SignInPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      const response = await fetch("http://localhost:8080/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
+          name: formData.name,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        if (response.status === 401) {
-          toast.error("이메일 또는 비밀번호가 올바르지 않습니다");
-          setErrors({ email: " ", password: "이메일 또는 비밀번호가 올바르지 않습니다" });
+        if (response.status === 409) {
+          setErrors((prev) => ({ ...prev, email: data.message }));
+          toast.error(data.message);
         } else {
-          toast.error(data.message || "로그인 중 오류가 발생했습니다");
+          toast.error(data.message || "회원가입 중 오류가 발생했습니다");
         }
         return;
       }
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify({
-        userId: data.userId,
-        email: data.email,
-        name: data.name,
-        role: data.role,
-      }));
-
-      toast.success("로그인 성공!");
-      setTimeout(() => {
-        router.push("/");
-        router.refresh();
-      }, 500);
+      toast.success("회원가입이 완료되었습니다!");
+      setTimeout(() => router.push("/"), 1000);
     } catch (error) {
-      console.error("로그인 에러:", error);
       toast.error("서버와 통신 중 오류가 발생했습니다");
     } finally {
       setIsLoading(false);
@@ -109,10 +118,10 @@ export default function SignInPage() {
       <Card className="w-full max-w-md border-primary/20 shadow-lg">
         <CardHeader className="space-y-3 text-center">
           <CardTitle className="text-2xl font-semibold text-slate-900">
-            CodeBrainer 로그인
+            CodeBrainer 회원가입
           </CardTitle>
           <CardDescription className="text-sm text-slate-600">
-            이메일로 로그인하여 학습을 이어가세요
+            계정을 만들고 프로그래밍 학습을 시작하세요
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,27 +135,38 @@ export default function SignInPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="name">이름</Label>
+              <Input id="name" name="name" type="text" placeholder="홍길동"
+                value={formData.name} onChange={handleChange} disabled={isLoading}
+                className={errors.name ? "border-red-500" : ""} />
+              {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password">비밀번호</Label>
-              <Input id="password" name="password" type="password" placeholder="비밀번호를 입력하세요"
+              <Input id="password" name="password" type="password" placeholder="최소 8자 이상"
                 value={formData.password} onChange={handleChange} disabled={isLoading}
                 className={errors.password ? "border-red-500" : ""} />
               {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "로그인 중..." : "로그인"}
-            </Button>
-
-            <div className="text-center text-sm text-muted-foreground">
-              계정이 없으신가요?{" "}
-              <Link href="/auth/signup" className="text-primary hover:underline">
-                회원가입
-              </Link>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">비밀번호 확인</Label>
+              <Input id="confirmPassword" name="confirmPassword" type="password"
+                placeholder="비밀번호를 다시 입력하세요" value={formData.confirmPassword}
+                onChange={handleChange} disabled={isLoading}
+                className={errors.confirmPassword ? "border-red-500" : ""} />
+              {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
             </div>
 
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "처리 중..." : "회원가입"}
+            </Button>
+
             <div className="pt-2 text-center text-sm text-muted-foreground">
-              <Link href="/" className="text-primary hover:underline">
-                메인으로 돌아가기
+              이미 계정이 있으신가요?{" "}
+              <Link href="/auth/signin" className="text-primary hover:underline">
+                로그인
               </Link>
             </div>
           </form>
@@ -155,4 +175,5 @@ export default function SignInPage() {
     </div>
   );
 }
+
 
