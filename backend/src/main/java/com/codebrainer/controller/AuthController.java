@@ -57,6 +57,7 @@ public class AuthController {
             // UserService의 create 메서드 호출 (비밀번호 암호화 포함)
             User user = userService.create(
                     request.getEmail(),
+                    request.getUsername(),
                     request.getPassword(),
                     request.getName()
             );
@@ -97,7 +98,7 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             BindingResult bindingResult
     ) {
-        log.info("로그인 요청: email={}", request.getEmail());
+        log.info("로그인 요청: emailOrUsername={}", request.getEmailOrUsername());
 
         if (bindingResult.hasErrors()) {
             String errorMessage = bindingResult.getAllErrors().get(0).getDefaultMessage();
@@ -106,10 +107,10 @@ public class AuthController {
         }
 
         try {
-            User user = userService.login(request.getEmail(), request.getPassword());
+            User user = userService.login(request.getEmailOrUsername(), request.getPassword());
             String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getName());
             LoginResponse response = LoginResponse.of(user, token);
-            log.info("로그인 성공: userId={}, email={}", user.getId(), user.getEmail());
+            log.info("로그인 성공: userId={}, email={}, username={}", user.getId(), user.getEmail(), user.getUsername());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             log.error("로그인 실패: {}", e.getMessage());
@@ -137,6 +138,23 @@ public class AuthController {
         
         return ResponseEntity.ok()
                 .body(new EmailCheckResponse(!exists, exists ? "이미 사용 중인 이메일입니다" : "사용 가능한 이메일입니다"));
+    }
+
+    /**
+     * 아이디 중복 체크 API
+     * GET /api/auth/check-username?username=testuser
+     * 
+     * @param username 체크할 아이디
+     * @return 중복 여부 (true: 사용 가능, false: 중복)
+     */
+    @GetMapping("/check-username")
+    public ResponseEntity<?> checkUsername(@RequestParam String username) {
+        log.info("아이디 중복 체크: username={}", username);
+
+        boolean exists = userService.existsByUsername(username);
+        
+        return ResponseEntity.ok()
+                .body(new EmailCheckResponse(!exists, exists ? "이미 사용 중인 아이디입니다" : "사용 가능한 아이디입니다"));
     }
 
     /**
