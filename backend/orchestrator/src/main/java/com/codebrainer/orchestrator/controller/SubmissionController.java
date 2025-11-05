@@ -37,7 +37,8 @@ public class SubmissionController {
             @RequestBody @Valid SubmissionRequest request
     ) throws IOException {
         // TODO: 실제 사용자 인증 연동 후 userId 결정
-        Long mockUserId = 1L;
+        // Prisma User 테이블의 UUID (String) 형식으로 변경됨
+        String mockUserId = "mock-user-id-temp"; // 임시 값, 실제 인증 연동 시 세션에서 가져와야 함
         SubmissionResponse response = submissionService.createSubmission(mockUserId, request);
         return ResponseEntity.ok(response);
     }
@@ -50,18 +51,26 @@ public class SubmissionController {
         SubmissionResult result = submissionResultRepository.findBySubmission(submission)
                 .orElse(null);
 
-        return ResponseEntity.ok(Map.of(
-                "submissionId", submission.getId(),
-                "status", submission.getStatus().name(),
-                "result", result != null ? Map.of(
-                        "compile", Map.of(
-                                "ok", result.getCompileOk(),
-                                "message", result.getCompileMessage()
-                        ),
-                        "summary", result.getSummaryJson(),
-                        "tests", result.getTestsJson()
-                ) : null
-        ));
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("submissionId", submission.getId());
+        response.put("status", submission.getStatus().name());
+
+        if (result != null) {
+            Map<String, Object> compile = new java.util.HashMap<>();
+            compile.put("ok", result.getCompileOk());
+            compile.put("message", result.getCompileMessage() != null ? result.getCompileMessage() : "");
+
+            Map<String, Object> resultData = new java.util.HashMap<>();
+            resultData.put("compile", compile);
+            resultData.put("summary", result.getSummaryJson());
+            resultData.put("tests", result.getTestsJson());
+
+            response.put("result", resultData);
+        } else {
+            response.put("result", null);
+        }
+
+        return ResponseEntity.ok(response);
     }
 }
 
