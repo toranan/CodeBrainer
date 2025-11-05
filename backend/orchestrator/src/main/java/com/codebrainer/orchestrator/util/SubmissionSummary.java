@@ -20,7 +20,7 @@ public record SubmissionSummary(
             return MAPPER.writeValueAsString(Map.of(
                     "compile", Map.of(
                             "ok", compileOk,
-                            "message", compileMessage
+                            "message", compileMessage != null ? compileMessage : ""
                     ),
                     "summary", Map.of(
                             "AC", summary.getOrDefault("AC", 0),

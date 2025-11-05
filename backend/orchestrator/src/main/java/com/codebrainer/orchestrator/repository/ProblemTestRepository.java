@@ -9,6 +9,8 @@ public interface ProblemTestRepository extends JpaRepository<ProblemTest, Long> 
 
     List<ProblemTest> findAllByProblemOrderByCaseNo(Problem problem);
 
+    List<ProblemTest> findAllByProblemIdOrderByCaseNo(Long problemId);
+
     void deleteByProblem(Problem problem);
 }
 

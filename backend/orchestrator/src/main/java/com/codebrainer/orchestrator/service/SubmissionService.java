@@ -35,7 +35,7 @@ public class SubmissionService {
     }
 
     @Transactional
-    public SubmissionResponse createSubmission(Long userId, SubmissionRequest request) throws IOException {
+    public SubmissionResponse createSubmission(String userId, SubmissionRequest request) throws IOException {
         Problem problem = problemRepository.findById(request.problemId())
                 .orElseThrow(() -> new IllegalArgumentException("문제를 찾을 수 없습니다."));
 
@@ -46,14 +46,21 @@ public class SubmissionService {
         submission.setStatus(Submission.Status.QUEUED);
         submission.setCreatedAt(OffsetDateTime.now());
         submission.setUpdatedAt(OffsetDateTime.now());
+        // 임시 code_path 설정 (NOT NULL 제약조건을 만족하기 위해)
+        submission.setCodePath("temp/path");
 
+        // 먼저 저장하여 ID 생성
         Submission saved = submissionRepository.save(submission);
 
+        // ID를 얻은 후 실제 code_path 생성 및 설정
         String codePath = buildCodePath(saved.getId());
+        saved.setCodePath(codePath);
+        
+        // 코드를 스토리지에 저장
         storageClient.saveString(codePath, request.code());
 
-        saved.setCodePath(codePath);
-        submissionRepository.save(saved);
+        // code_path를 포함하여 다시 저장
+        saved = submissionRepository.save(saved);
 
         submissionPublisher.publishSubmission(saved.getId());
 

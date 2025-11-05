@@ -50,6 +50,9 @@ async function AppShell({ children }: { children: ReactNode }) {
             </Link>
           </nav>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Link href="/me" className="hover:text-primary">
+              마이페이지
+            </Link>
             <Link href="/auth/signin" className="hover:text-primary">
               로그인
             </Link>

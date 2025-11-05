@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  simple-judge:
+    image: node:18-alpine
+    restart: unless-stopped
+    command: sh -c "npm install express body-parser && node /app/judge-server.js"
+    working_dir: /app
+    volumes:
+      - ./simple-judge:/app
+    ports:
+      - "2358:2358"
+    environment:
+      - NODE_ENV=production

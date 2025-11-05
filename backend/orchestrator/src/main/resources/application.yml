@@ -8,7 +8,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     properties:
       hibernate:
         format_sql: true
@@ -18,7 +18,7 @@ spring:
     username: guest
     password: guest
   flyway:
-    enabled: true
+    enabled: false
 
 management:
   endpoints:
@@ -30,7 +30,7 @@ storage:
   base-path: ./storage
 
 judge0:
-  api-url: http://localhost:2358
+  api-url: http://3.27.95.194:2358
   callback-url: http://localhost:8080/internal/judge0/callback
   callback-enabled: false
 
@@ -44,4 +44,9 @@ codebrainer:
   submission:
     poll-delay-ms: 1000
     max-poll-attempts: 30
+
+logging:
+  level:
+    org.springframework.web.client: DEBUG
+    org.apache.http: DEBUG
 

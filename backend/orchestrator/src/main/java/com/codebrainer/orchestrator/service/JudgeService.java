@@ -21,6 +21,7 @@ import jakarta.transaction.Transactional;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,27 +83,103 @@ public class JudgeService {
 
         String sourceCode = storageClient.readString(submission.getCodePath());
 
-        List<ProblemTest> tests = problemTestRepository.findAllByProblemOrderByCaseNo(submission.getProblem());
+        Long problemId = submission.getProblem().getId();
+        List<ProblemTest> tests = problemTestRepository.findAllByProblemIdOrderByCaseNo(problemId);
+
+        log.info("제출 {}: 문제 ID {}, 테스트케이스 개수: {}", submissionId, problemId, tests.size());
+
+        if (tests.isEmpty()) {
+            log.error("제출 {}에 대한 테스트케이스가 없습니다. 문제 ID: {}", submissionId, problemId);
+            throw new IllegalStateException("테스트케이스가 없습니다. 문제를 먼저 설정해야 합니다.");
+        }
 
         List<Judge0SubmissionRequest> judgeRequests = new ArrayList<>();
         for (ProblemTest test : tests) {
-            judgeRequests.add(new Judge0SubmissionRequest(
-                    sourceCode,
-                    mapLanguage(submission.getLanguageId()),
-                    new String(storageClient.read(test.getInputPath())),
-                    new String(storageClient.read(test.getOutputPath())),
-                    submission.getProblem().getTimeMs() / 1000.0,
-                    submission.getProblem().getMemMb() * 1024
-            ));
+            try {
+                String input = new String(storageClient.read(test.getInputPath()));
+                String output = new String(storageClient.read(test.getOutputPath()));
+                log.debug("테스트케이스 {}: inputPath={}, outputPath={}", 
+                    test.getId(), test.getInputPath(), test.getOutputPath());
+                
+                // Base64 인코딩
+                String encodedSourceCode = Base64.getEncoder().encodeToString(sourceCode.getBytes());
+                String encodedInput = Base64.getEncoder().encodeToString(input.getBytes());
+                String encodedOutput = Base64.getEncoder().encodeToString(output.getBytes());
+
+                judgeRequests.add(new Judge0SubmissionRequest(
+                        encodedSourceCode,
+                        mapLanguage(submission.getLanguageId()),
+                        encodedInput,
+                        encodedOutput,
+                        submission.getProblem().getTimeMs() / 1000.0,
+                        submission.getProblem().getMemMb() * 1024
+                ));
+            } catch (Exception e) {
+                log.error("테스트케이스 {} 파일 읽기 실패: {}", test.getId(), e.getMessage(), e);
+                throw new IOException("테스트케이스 파일을 읽을 수 없습니다: " + test.getInputPath(), e);
+            }
         }
 
-        List<String> tokens = judge0Client.submitBatch(judgeRequests)
-                .submissions()
-                .stream()
-                .map(Judge0SubmissionResult::token)
-                .toList();
+        log.info("제출 {}: Judge0 요청 개수: {}", submissionId, judgeRequests.size());
 
-        List<Judge0SubmissionResult> results = pollResults(tokens);
+        if (judgeRequests.isEmpty()) {
+            log.error("제출 {}에 대한 Judge0 요청이 생성되지 않았습니다.", submissionId);
+            throw new IllegalStateException("채점 요청을 생성할 수 없습니다.");
+        }
+
+        List<String> tokens;
+        try {
+            Judge0SubmissionResponse batchResponse = judge0Client.submitBatch(judgeRequests);
+            if (batchResponse == null || batchResponse.submissions() == null || batchResponse.submissions().isEmpty()) {
+                log.error("제출 {}: Judge0 배치 응답이 비어있습니다.", submissionId);
+                throw new IllegalStateException("Judge0 API로부터 토큰을 받지 못했습니다.");
+            }
+            
+            tokens = batchResponse.submissions()
+                    .stream()
+                    .map(Judge0SubmissionResult::token)
+                    .filter(token -> token != null && !token.isEmpty())
+                    .toList();
+            
+            if (tokens.size() != judgeRequests.size()) {
+                log.warn("제출 {}: 요청한 개수({})와 받은 토큰 개수({})가 다릅니다.", 
+                    submissionId, judgeRequests.size(), tokens.size());
+            }
+            
+            log.info("제출 {}: {}개의 토큰을 받았습니다.", submissionId, tokens.size());
+        } catch (RuntimeException e) {
+            log.error("제출 {}: Judge0 배치 제출 실패: {}", submissionId, e.getMessage(), e);
+            submission.setStatus(Submission.Status.FAILED);
+            submission.setUpdatedAt(java.time.OffsetDateTime.now());
+            submissionRepository.save(submission);
+            throw new IOException("Judge0 API 호출 실패: " + e.getMessage(), e);
+        }
+
+        List<Judge0SubmissionResult> results;
+        try {
+            results = pollResults(tokens);
+            if (results == null || results.isEmpty()) {
+                log.error("제출 {}: Judge0 결과를 받지 못했습니다.", submissionId);
+                throw new IllegalStateException("Judge0 결과를 받지 못했습니다.");
+            }
+            if (results.size() != tests.size()) {
+                log.warn("제출 {}: 테스트케이스 개수({})와 결과 개수({})가 다릅니다.", 
+                    submissionId, tests.size(), results.size());
+            }
+        } catch (InterruptedException e) {
+            log.error("제출 {}: 결과 폴링 중 인터럽트 발생", submissionId, e);
+            Thread.currentThread().interrupt();
+            submission.setStatus(Submission.Status.FAILED);
+            submission.setUpdatedAt(java.time.OffsetDateTime.now());
+            submissionRepository.save(submission);
+            throw e;
+        } catch (RuntimeException e) {
+            log.error("제출 {}: 결과 폴링 실패: {}", submissionId, e.getMessage(), e);
+            submission.setStatus(Submission.Status.FAILED);
+            submission.setUpdatedAt(java.time.OffsetDateTime.now());
+            submissionRepository.save(submission);
+            throw new IOException("Judge0 결과 조회 실패: " + e.getMessage(), e);
+        }
 
         SubmissionSummary summary = summaryAggregator.aggregate(results);
 
@@ -155,16 +232,62 @@ public class JudgeService {
     private List<Judge0SubmissionResult> pollResults(List<String> tokens) throws InterruptedException {
         List<Judge0SubmissionResult> results = new ArrayList<>();
         int attempts = 0;
+        
         while (attempts < maxPollAttempts) {
             attempts++;
-            Judge0SubmissionResponse response = judge0Client.fetchBatchTokens(tokens);
-            results = response.submissions();
-            boolean allFinished = results.stream().allMatch(this::isTerminalStatus);
-            if (allFinished) {
-                return results;
+            try {
+                Judge0SubmissionResponse response = judge0Client.fetchBatchTokens(tokens);
+                if (response == null || response.submissions() == null) {
+                    log.warn("Judge0 응답이 null이거나 submissions가 null입니다. 재시도 중... (시도 {}/{})", 
+                        attempts, maxPollAttempts);
+                    if (attempts < maxPollAttempts) {
+                        TimeUnit.MILLISECONDS.sleep(pollDelayMs);
+                        continue;
+                    } else {
+                        throw new IllegalStateException("Judge0 응답을 받지 못했습니다.");
+                    }
+                }
+                
+                results = response.submissions();
+                if (results.isEmpty()) {
+                    log.warn("Judge0 응답이 비어있습니다. 재시도 중... (시도 {}/{})", 
+                        attempts, maxPollAttempts);
+                    if (attempts < maxPollAttempts) {
+                        TimeUnit.MILLISECONDS.sleep(pollDelayMs);
+                        continue;
+                    } else {
+                        throw new IllegalStateException("Judge0 결과가 비어있습니다.");
+                    }
+                }
+                
+                boolean allFinished = results.stream().allMatch(this::isTerminalStatus);
+                if (allFinished) {
+                    log.info("모든 Judge0 결과가 완료되었습니다. (시도 {}/{})", attempts, maxPollAttempts);
+                    return results;
+                }
+                
+                log.debug("Judge0 결과 대기 중... 완료된 개수: {}/{}, 시도 {}/{}", 
+                    results.stream().filter(this::isTerminalStatus).count(),
+                    results.size(),
+                    attempts,
+                    maxPollAttempts);
+                
+                TimeUnit.MILLISECONDS.sleep(pollDelayMs);
+            } catch (InterruptedException e) {
+                log.error("Judge0 결과 폴링 중 인터럽트 발생");
+                Thread.currentThread().interrupt();
+                throw e;
+            } catch (RuntimeException e) {
+                log.error("Judge0 결과 폴링 중 에러 발생 (시도 {}/{}): {}", 
+                    attempts, maxPollAttempts, e.getMessage(), e);
+                if (attempts >= maxPollAttempts) {
+                    throw e;
+                }
+                TimeUnit.MILLISECONDS.sleep(pollDelayMs);
             }
-            TimeUnit.MILLISECONDS.sleep(pollDelayMs);
         }
+        
+        log.warn("Judge0 결과 폴링 타임아웃. 최대 시도 횟수({})에 도달했습니다.", maxPollAttempts);
         return results;
     }
 
