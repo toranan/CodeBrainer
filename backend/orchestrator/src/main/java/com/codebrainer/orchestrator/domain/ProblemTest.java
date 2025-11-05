@@ -1,16 +1,13 @@
 package com.codebrainer.orchestrator.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "problem_tests")
 public class ProblemTest {
 
@@ -37,60 +34,14 @@ public class ProblemTest {
     @Column(columnDefinition = "text")
     private String explanation;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Problem getProblem() {
-        return problem;
-    }
-
-    public void setProblem(Problem problem) {
+    @Builder
+    public ProblemTest(Problem problem, Integer caseNo, String inputPath, String outputPath) {
         this.problem = problem;
-    }
-
-    public Integer getCaseNo() {
-        return caseNo;
-    }
-
-    public void setCaseNo(Integer caseNo) {
         this.caseNo = caseNo;
-    }
-
-    public String getInputPath() {
-        return inputPath;
-    }
-
-    public void setInputPath(String inputPath) {
         this.inputPath = inputPath;
-    }
-
-    public String getOutputPath() {
-        return outputPath;
-    }
-
-    public void setOutputPath(String outputPath) {
         this.outputPath = outputPath;
-    }
-
-    public Boolean getHidden() {
-        return hidden;
-    }
-
-    public void setHidden(Boolean hidden) {
-        this.hidden = hidden;
-    }
-
-    public String getExplanation() {
-        return explanation;
-    }
-
-    public void setExplanation(String explanation) {
-        this.explanation = explanation;
+        this.is_hidden = false;
+        this.explanation = "";
     }
 }
 
