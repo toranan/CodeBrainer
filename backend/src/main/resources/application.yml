@@ -41,3 +41,14 @@ logging:
 jwt:
   secret: ${JWT_SECRET:codebrainer-secret-key-for-jwt-token-generation-minimum-256-bits-required-for-hs256-algorithm}
   expiration: ${JWT_EXPIRATION:86400000}  # 24시간 (밀리초)
+
+# 초기 관리자 계정 설정 (서버 시작 시 자동 생성)
+admins:
+  - email: admin@codebrainer.com
+    username: admin
+    password: admin1234
+    name: 메인 관리자
+  - email: manager@codebrainer.com
+    username: manager
+    password: manager1234
+    name: 부관리자

@@ -25,19 +25,26 @@ public class UserService {
      * 회원 데이터 생성 (회원가입)
      * 
      * @param email 이메일
+     * @param username 아이디
      * @param password 평문 비밀번호
      * @param name 이름
      * @return 생성된 User 엔티티
-     * @throws IllegalArgumentException 이메일이 이미 존재하는 경우
+     * @throws IllegalArgumentException 이메일 또는 아이디가 이미 존재하는 경우
      */
     @Transactional
-    public User create(String email, String password, String name) {
-        log.info("회원가입 시도: email={}, name={}", email, name);
+    public User create(String email, String username, String password, String name) {
+        log.info("회원가입 시도: email={}, username={}, name={}", email, username, name);
 
         // 이메일 중복 체크
         if (userRepository.existsByEmail(email)) {
             log.warn("이메일 중복: {}", email);
             throw new IllegalArgumentException("이미 존재하는 이메일입니다: " + email);
+        }
+
+        // 아이디 중복 체크
+        if (userRepository.existsByUsername(username)) {
+            log.warn("아이디 중복: {}", username);
+            throw new IllegalArgumentException("이미 존재하는 아이디입니다: " + username);
         }
 
         // 비밀번호 암호화 (BCryptPasswordEncoder 사용)
@@ -47,6 +54,7 @@ public class UserService {
         // User 엔티티 생성
         User user = User.builder()
                 .email(email)
+                .username(username)
                 .password(encodedPassword)
                 .name(name)
                 .provider("local") // 일반 회원가입
@@ -55,7 +63,7 @@ public class UserService {
 
         // 저장
         User savedUser = userRepository.save(user);
-        log.info("회원가입 완료: userId={}, email={}", savedUser.getId(), savedUser.getEmail());
+        log.info("회원가입 완료: userId={}, email={}, username={}", savedUser.getId(), savedUser.getEmail(), savedUser.getUsername());
 
         return savedUser;
     }
@@ -93,31 +101,52 @@ public class UserService {
     }
 
     /**
-     * 로그인 (이메일/비밀번호 검증)
+     * 아이디 존재 여부 확인
+     * 
+     * @param username 아이디
+     * @return 존재 여부
+     */
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    /**
+     * 로그인 (이메일 또는 아이디/비밀번호 검증)
      *
-     * @param email 이메일
+     * @param emailOrUsername 이메일 또는 아이디
      * @param password 평문 비밀번호
      * @return User 엔티티
      * @throws IllegalArgumentException 사용자를 찾을 수 없거나 비밀번호가 틀린 경우
      */
     @Transactional(readOnly = true)
-    public User login(String email, String password) {
-        log.info("로그인 시도: email={}", email);
+    public User login(String emailOrUsername, String password) {
+        log.info("로그인 시도: emailOrUsername={}", emailOrUsername);
 
-        // 사용자 조회
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> {
-                    log.warn("로그인 실패 - 사용자 없음: {}", email);
-                    return new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다");
-                });
+        // 이메일인지 아이디인지 판단 (@ 포함 여부)
+        User user;
+        if (emailOrUsername.contains("@")) {
+            // 이메일로 조회
+            user = userRepository.findByEmail(emailOrUsername)
+                    .orElseThrow(() -> {
+                        log.warn("로그인 실패 - 사용자 없음 (이메일): {}", emailOrUsername);
+                        return new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다");
+                    });
+        } else {
+            // 아이디로 조회
+            user = userRepository.findByUsername(emailOrUsername)
+                    .orElseThrow(() -> {
+                        log.warn("로그인 실패 - 사용자 없음 (아이디): {}", emailOrUsername);
+                        return new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다");
+                    });
+        }
 
         // 비밀번호 검증
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            log.warn("로그인 실패 - 비밀번호 불일치: {}", email);
-            throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다");
+            log.warn("로그인 실패 - 비밀번호 불일치: {}", emailOrUsername);
+            throw new IllegalArgumentException("아이디/이메일 또는 비밀번호가 올바르지 않습니다");
         }
 
-        log.info("로그인 성공: userId={}, email={}", user.getId(), user.getEmail());
+        log.info("로그인 성공: userId={}, email={}, username={}", user.getId(), user.getEmail(), user.getUsername());
         return user;
     }
 }
