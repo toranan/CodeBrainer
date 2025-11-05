@@ -20,33 +20,76 @@ export default function SignUpPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
     confirmPassword: "",
     name: "",
   });
   const [errors, setErrors] = useState({
-    email: "",
+    username: "",
     password: "",
     confirmPassword: "",
     name: "",
   });
+  const [usernameChecked, setUsernameChecked] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
+    
+    // username이 변경되면 중복 체크 상태 초기화
+    if (name === "username") {
+      setUsernameChecked(false);
+      setUsernameAvailable(false);
+    }
+  };
+
+  const checkUsername = async () => {
+    if (!formData.username) {
+      setErrors((prev) => ({ ...prev, username: "아이디를 입력하세요" }));
+      return;
+    }
+
+    if (formData.username.length < 4 || formData.username.length > 20) {
+      setErrors((prev) => ({ ...prev, username: "아이디는 4자 이상 20자 이하여야 합니다" }));
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/auth/check-username?username=${encodeURIComponent(formData.username)}`
+      );
+      const data = await response.json();
+      
+      setUsernameChecked(true);
+      setUsernameAvailable(data.available);
+      
+      if (data.available) {
+        toast.success("사용 가능한 아이디입니다");
+        setErrors((prev) => ({ ...prev, username: "" }));
+      } else {
+        toast.error("이미 사용 중인 아이디입니다");
+        setErrors((prev) => ({ ...prev, username: data.message }));
+      }
+    } catch (error) {
+      toast.error("아이디 중복 확인 중 오류가 발생했습니다");
+    }
   };
 
   const validate = (): boolean => {
-    const newErrors = { email: "", password: "", confirmPassword: "", name: "" };
+    const newErrors = { username: "", password: "", confirmPassword: "", name: "" };
     let isValid = true;
 
-    if (!formData.email) {
-      newErrors.email = "이메일은 필수입니다";
+    if (!formData.username) {
+      newErrors.username = "아이디는 필수입니다";
       isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "올바른 이메일 형식이 아닙니다";
+    } else if (formData.username.length < 4 || formData.username.length > 20) {
+      newErrors.username = "아이디는 4자 이상 20자 이하여야 합니다";
+      isValid = false;
+    } else if (!usernameChecked || !usernameAvailable) {
+      newErrors.username = "아이디 중복 확인을 해주세요";
       isValid = false;
     }
 
@@ -86,7 +129,8 @@ export default function SignUpPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: formData.email,
+          email: `${formData.username}@codebrainer.local`,
+          username: formData.username,
           password: formData.password,
           name: formData.name,
         }),
@@ -118,20 +162,26 @@ export default function SignUpPage() {
       <Card className="w-full max-w-md border-primary/20 shadow-lg">
         <CardHeader className="space-y-3 text-center">
           <CardTitle className="text-2xl font-semibold text-slate-900">
-            CodeBrainer 회원가입
+            회원가입
           </CardTitle>
           <CardDescription className="text-sm text-slate-600">
-            계정을 만들고 프로그래밍 학습을 시작하세요
+            CodeBrainer에 오신 것을 환영합니다
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">이메일</Label>
-              <Input id="email" name="email" type="email" placeholder="your@email.com"
-                value={formData.email} onChange={handleChange} disabled={isLoading}
-                className={errors.email ? "border-red-500" : ""} />
-              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+              <Label htmlFor="username">아이디</Label>
+              <div className="flex gap-2">
+                <Input id="username" name="username" type="text" placeholder="4-20자 영문/숫자"
+                  value={formData.username} onChange={handleChange} disabled={isLoading}
+                  className={errors.username ? "border-red-500" : usernameChecked && usernameAvailable ? "border-green-500" : ""} />
+                <Button type="button" variant="outline" onClick={checkUsername} disabled={isLoading || !formData.username}>
+                  중복확인
+                </Button>
+              </div>
+              {errors.username && <p className="text-sm text-red-500">{errors.username}</p>}
+              {usernameChecked && usernameAvailable && <p className="text-sm text-green-600">✓ 사용 가능한 아이디입니다</p>}
             </div>
 
             <div className="space-y-2">
