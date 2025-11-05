@@ -204,7 +204,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          problemId: problem.id,
+          problemId: problem.slug,
           language,
           code: currentCode,
           mode: "submit",
