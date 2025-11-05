@@ -2,7 +2,9 @@ package com.codebrainer.orchestrator.judge0;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+@JsonDeserialize(using = Judge0StatusDeserializer.class)
 public enum Judge0Status {
     IN_QUEUE(1),
     PROCESSING(2),

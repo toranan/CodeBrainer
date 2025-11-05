@@ -20,8 +20,6 @@ model User {
   provider      String?
   image         String?
   role          UserRole      @default(USER)
-  submissions   Submission[]
-  mockAttempts  MockExamAttempt[]
   accounts      Account[]
   sessions      Session[]
   createdAt     DateTime      @default(now())
@@ -62,151 +60,20 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Problem {
-  id          String       @id @default(cuid())
-  title       String
-  slug        String       @unique
-  difficulty  Difficulty
-  categories  String[]
-  statement   String
-  ioSample    Json
-  constraints String?
-  languages   SupportedLanguage[]
-  testcases   Testcase[]
-  hints       Hint[]
-  solutions   Solution[]
-  submissions Submission[]
-  mockProblems MockExamProblem[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-}
-
-model Testcase {
-  id        String   @id @default(cuid())
-  problemId String
-  input     String   @db.Text
-  output    String   @db.Text
-  isHidden  Boolean  @default(true)
-  order     Int      @default(0)
-  Problem   Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
-}
-
-model Hint {
-  id          String  @id @default(cuid())
-  problemId   String
-  stage       Int
-  title       String?
-  content     String   @db.Text
-  waitSeconds Int
-  Problem     Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
-
-  @@unique([problemId, stage])
-}
-
-model Solution {
-  id        String   @id @default(cuid())
-  problemId String
-  language  SupportedLanguage
-  code      String   @db.Text
-  note      String?
-  Problem   Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
-
-  @@unique([problemId, language])
-}
-
-model Submission {
-  id           String           @id @default(cuid())
-  userId       String
-  problemId    String
-  language     SupportedLanguage
-  code         String           @db.Text
-  status       SubmissionStatus @default(PENDING)
-  score        Int              @default(0)
-  results      Json?
-  compileLog   String?          @db.Text
-  mockAttemptId String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  problem      Problem          @relation(fields: [problemId], references: [id], onDelete: Cascade)
-  mockAttempt  MockExamAttempt? @relation(fields: [mockAttemptId], references: [id], onDelete: Cascade)
-
-  @@index([userId, problemId])
-  @@index([mockAttemptId])
-}
-
-model MockExam {
-  id              String             @id @default(cuid())
-  title           String
-  description     String?
-  durationMinutes Int
-  submissionLimit Int?
-  problems        MockExamProblem[]
-  attempts        MockExamAttempt[]
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-}
-
-model MockExamProblem {
-  id         String   @id @default(cuid())
-  mockExamId String
-  problemId  String
-  order      Int      @default(0)
-  mockExam   MockExam @relation(fields: [mockExamId], references:[id], onDelete: Cascade)
-  problem    Problem  @relation(fields: [problemId], references:[id], onDelete: Cascade)
-
-  @@unique([mockExamId, problemId])
-  @@index([mockExamId, order])
-}
-
-model MockExamAttempt {
-  id               String           @id @default(cuid())
-  userId           String
-  mockExamId       String
-  startedAt        DateTime         @default(now())
-  endedAt          DateTime?
-  status           MockExamStatus   @default(IN_PROGRESS)
-  remainingSubmits Int?
-  submissions      Submission[]
-  user             User             @relation(fields: [userId], references:[id], onDelete: Cascade)
-  mockExam         MockExam         @relation(fields: [mockExamId], references:[id], onDelete: Cascade)
-
-  @@unique([userId, mockExamId, startedAt])
-}
+// ==========================================
+// 아래 모델들은 Orchestrator (Spring Boot)에서 관리합니다.
+// Prisma는 인증(User, Account, Session)만 담당합니다.
+// ==========================================
+// Problem, Testcase, Hint, Solution, Submission 등은
+// backend/orchestrator/src/main/resources/db/migration/ 에서 관리됩니다.
 
 enum UserRole {
   USER
   ADMIN
 }
 
-enum SubmissionStatus {
-  PENDING
-  AC
-  WA
-  TLE
-  RE
-  CE
-}
-
-enum Difficulty {
-  BRONZE
-  SILVER
-  GOLD
-  PLATINUM
-  DIAMOND
-}
-
-enum SupportedLanguage {
-  C
-  CPP
-  JAVA
-  PYTHON
-  JAVASCRIPT
-  GO
-}
-
-enum MockExamStatus {
-  IN_PROGRESS
-  COMPLETED
-  ABANDONED
-}
+// ==========================================
+// 아래 Enum들은 Orchestrator에서 관리합니다.
+// ==========================================
+// SubmissionStatus, Difficulty, SupportedLanguage, MockExamStatus 등은
+// backend/orchestrator/src/main/java/com/codebrainer/orchestrator/domain/ 에서 관리됩니다.
