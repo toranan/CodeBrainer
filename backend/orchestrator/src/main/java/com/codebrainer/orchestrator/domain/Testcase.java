@@ -8,8 +8,8 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "problem_tests")
-public class ProblemTest {
+@Table(name = "testcases")
+public class Testcase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,7 +35,7 @@ public class ProblemTest {
     private String explanation;
 
     @Builder
-    public ProblemTest(Problem problem, Integer caseNo, String inputPath, String outputPath) {
+    public Testcase(Problem problem, Integer caseNo, String inputPath, String outputPath) {
         this.problem = problem;
         this.caseNo = caseNo;
         this.inputPath = inputPath;
