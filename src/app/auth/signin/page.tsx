@@ -20,11 +20,11 @@ export default function SignInPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: "",
+    emailOrUsername: "",
     password: "",
   });
   const [errors, setErrors] = useState({
-    email: "",
+    emailOrUsername: "",
     password: "",
   });
 
@@ -35,14 +35,11 @@ export default function SignInPage() {
   };
 
   const validate = (): boolean => {
-    const newErrors = { email: "", password: "" };
+    const newErrors = { emailOrUsername: "", password: "" };
     let isValid = true;
 
-    if (!formData.email) {
-      newErrors.email = "이메일은 필수입니다";
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "올바른 이메일 형식이 아닙니다";
+    if (!formData.emailOrUsername) {
+      newErrors.emailOrUsername = "아이디는 필수입니다";
       isValid = false;
     }
 
@@ -66,7 +63,7 @@ export default function SignInPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: formData.email,
+          emailOrUsername: formData.emailOrUsername,
           password: formData.password,
         }),
       });
@@ -75,8 +72,8 @@ export default function SignInPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          toast.error("이메일 또는 비밀번호가 올바르지 않습니다");
-          setErrors({ email: " ", password: "이메일 또는 비밀번호가 올바르지 않습니다" });
+          toast.error("아이디 또는 비밀번호가 올바르지 않습니다");
+          setErrors({ emailOrUsername: " ", password: "아이디 또는 비밀번호가 올바르지 않습니다" });
         } else {
           toast.error(data.message || "로그인 중 오류가 발생했습니다");
         }
@@ -109,20 +106,20 @@ export default function SignInPage() {
       <Card className="w-full max-w-md border-primary/20 shadow-lg">
         <CardHeader className="space-y-3 text-center">
           <CardTitle className="text-2xl font-semibold text-slate-900">
-            CodeBrainer 로그인
+            로그인
           </CardTitle>
           <CardDescription className="text-sm text-slate-600">
-            이메일로 로그인하여 학습을 이어가세요
+            아이디로 로그인하세요
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">이메일</Label>
-              <Input id="email" name="email" type="email" placeholder="your@email.com"
-                value={formData.email} onChange={handleChange} disabled={isLoading}
-                className={errors.email ? "border-red-500" : ""} />
-              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+              <Label htmlFor="emailOrUsername">아이디</Label>
+              <Input id="emailOrUsername" name="emailOrUsername" type="text" placeholder="아이디를 입력하세요"
+                value={formData.emailOrUsername} onChange={handleChange} disabled={isLoading}
+                className={errors.emailOrUsername ? "border-red-500" : ""} />
+              {errors.emailOrUsername && <p className="text-sm text-red-500">{errors.emailOrUsername}</p>}
             </div>
 
             <div className="space-y-2">

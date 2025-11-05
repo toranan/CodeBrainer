@@ -26,13 +26,87 @@ export default function MyPage() {
 
   const items = list?.content ?? [];
 
+  const overall = charts?.overall;
+  const recentItems = items.slice(0, 3); // 최근 3개만
+
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-8">
       <h1 className="mb-6 text-2xl font-semibold">마이페이지</h1>
 
+      {/* 프로필 정보 & 통계 */}
+      <section className="mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>👤 프로필 정보</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-6">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-3xl">
+                👤
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold mb-2">사용자 #{DEMO_USER_ID}</h2>
+                <div className="flex gap-6 text-sm text-muted-foreground">
+                  <div>
+                    <span className="font-medium text-slate-700">풀이 수:</span>{" "}
+                    {overall?.solvedProblems ?? 0}
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700">정답률:</span>{" "}
+                    {overall ? (overall.acRate * 100).toFixed(1) : 0}%
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700">도전 문제:</span>{" "}
+                    {overall?.attemptedProblems ?? 0}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* 활동 그래프 */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-lg font-semibold">📊 활동 그래프</h2>
+        <ActivityHeatmap data={charts?.activityByDay ?? []} />
+      </section>
+
+      {/* 알고리즘별 통계 */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-lg font-semibold">📈 알고리즘별 통계</h2>
+        <AlgorithmStats data={charts} />
+      </section>
+
+      {/* AI 추천 복습 문제 */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-lg font-semibold">🤖 AI 추천 복습 문제</h2>
+        <AIRecommendations userId={DEMO_USER_ID} />
+      </section>
+
+      {/* 최근 해결한 문제 */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-lg font-semibold">✅ 최근 해결한 문제</h2>
+        <div className="grid grid-cols-1 gap-4">
+          {recentItems.map((item, idx) => (
+            <ProblemItem key={idx} item={item} />
+          ))}
+          {recentItems.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                아직 푼 문제가 없어요.
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      </section>
+
+      <Separator className="my-8" />
+
+      {/* 내가 푼 문제 전체 목록 */}
       <section className="mb-10">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">내가 푼 문제</h2>
+          <h2 className="text-lg font-semibold">📋 내가 푼 문제 전체 목록</h2>
           <div className="text-sm text-muted-foreground">
             총 {list?.totalPages ?? 0} 페이지
           </div>
@@ -49,13 +123,27 @@ export default function MyPage() {
             </Card>
           ) : null}
         </div>
-      </section>
-
-      <Separator className="my-8" />
-
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">학습 데이터 시각화</h2>
-        <ChartsSection data={charts} />
+        {list && list.totalPages > 1 && (
+          <div className="mt-4 flex justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0}
+            >
+              이전
+            </Button>
+            <span className="flex items-center px-4 text-sm text-muted-foreground">
+              {page + 1} / {list.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              onClick={() => setPage(Math.min(list.totalPages - 1, page + 1))}
+              disabled={page >= list.totalPages - 1}
+            >
+              다음
+            </Button>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -111,61 +199,148 @@ function ProblemItem({ item }: { item: any }) {
   );
 }
 
-function ChartsSection({ data }: { data: any }) {
-  const overall = data?.overall;
-  const activity = data?.activityByDay ?? [];
-  const solvedByTier = data?.solvedCountByTier ?? [];
-  const lang = data?.languageUsage ?? [];
-
-  // 간단한 텍스트 프리뷰(차트 라이브러리 없이 최소 구현)
+// 활동 히트맵 (GitHub 스타일)
+function ActivityHeatmap({ data }: { data: any[] }) {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">최근 30일 활동</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-7 gap-2">
+          {data.map((d: any, idx: number) => {
+            const intensity = d.count === 0 ? 0 : d.count <= 2 ? 1 : d.count <= 5 ? 2 : 3;
+            const colors = [
+              "bg-slate-100",
+              "bg-green-200",
+              "bg-green-400",
+              "bg-green-600"
+            ];
+            return (
+              <div
+                key={idx}
+                className={`h-8 rounded ${colors[intensity]} flex items-center justify-center text-xs`}
+                title={`${d.date}: ${d.count}개`}
+              >
+                {d.count > 0 ? d.count : ""}
+              </div>
+            );
+          })}
+        </div>
+        {data.length === 0 && (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            활동 데이터가 없습니다
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// 알고리즘별 통계
+function AlgorithmStats({ data }: { data: any }) {
+  const categories = data?.solvedCountByCategory ?? [];
+  const levels = data?.solvedCountByLevel ?? [];
+  const langs = data?.languageUsage ?? [];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">최근 활동 (일별)</CardTitle>
+          <CardTitle className="text-base">카테고리별 해결 수</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-1 max-h-56 overflow-auto">
-          {activity.map((d: any) => (
-            <div key={d.date} className="flex justify-between"><span>{d.date}</span><span>{d.count}</span></div>
+        <CardContent className="text-sm text-muted-foreground space-y-2 max-h-64 overflow-auto">
+          {categories.map((c: any) => (
+            <div key={c.category} className="flex items-center justify-between">
+              <span className="font-medium">{c.category}</span>
+              <span className="text-primary font-semibold">{c.count}</span>
+            </div>
           ))}
-          {activity.length === 0 ? <div>데이터 없음</div> : null}
+          {categories.length === 0 && <div>데이터 없음</div>}
         </CardContent>
       </Card>
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">티어별 해결 수</CardTitle>
+          <CardTitle className="text-base">난이도별 해결 수</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-1">
-          {solvedByTier.map((t: any) => (
-            <div key={t.tier} className="flex justify-between"><span>{t.tier}</span><span>{t.count}</span></div>
+        <CardContent className="text-sm text-muted-foreground space-y-2">
+          {levels.map((l: any) => (
+            <div key={l.level} className="flex items-center justify-between">
+              <span className="font-medium">Level {l.level}</span>
+              <span className="text-primary font-semibold">{l.count}</span>
+            </div>
           ))}
-          {solvedByTier.length === 0 ? <div>데이터 없음</div> : null}
+          {levels.length === 0 && <div>데이터 없음</div>}
         </CardContent>
       </Card>
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">언어 비율</CardTitle>
+          <CardTitle className="text-base">사용 언어</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground space-y-1">
-          {lang.map((l: any) => (
-            <div key={l.lang} className="flex justify-between"><span>{l.lang}</span><span>{l.count}</span></div>
+        <CardContent className="text-sm text-muted-foreground space-y-2">
+          {langs.map((l: any) => (
+            <div key={l.lang} className="flex items-center justify-between">
+              <span className="font-medium">{l.lang}</span>
+              <span className="text-primary font-semibold">{l.count}</span>
+            </div>
           ))}
-          {lang.length === 0 ? <div>데이터 없음</div> : null}
+          {langs.length === 0 && <div>데이터 없음</div>}
         </CardContent>
       </Card>
-      {overall ? (
-        <Card className="md:col-span-3">
-          <CardHeader>
-            <CardTitle className="text-base">전체 요약</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground flex gap-6">
-            <div>도전 문제: {overall.attemptedProblems}</div>
-            <div>정답 문제: {overall.solvedProblems}</div>
-            <div>정답률: {(overall.acRate * 100).toFixed(1)}%</div>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
+  );
+}
+
+// AI 추천 복습 문제
+function AIRecommendations({ userId }: { userId: number }) {
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadRecommendations = async () => {
+    setLoading(true);
+    try {
+      // 여러 문제에 대해 복습 추천을 받아옴
+      const res = await getReview({ userId, baseProblemId: 1, limit: 5 });
+      setRecommendations(res?.recommendations ?? []);
+    } catch (error) {
+      console.error("복습 추천 로드 실패:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle className="text-base">🧠 맞춤형 복습 문제</CardTitle>
+        <Button size="sm" onClick={loadRecommendations} disabled={loading}>
+          {loading ? "로딩 중..." : "새로고침"}
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {recommendations.length > 0 ? (
+          <div className="space-y-3">
+            {recommendations.map((p: any) => (
+              <div
+                key={p.id}
+                className="rounded-lg border p-4 hover:bg-slate-50 transition-colors"
+              >
+                <div className="font-medium text-slate-900 mb-1">{p.title}</div>
+                <div className="text-sm text-muted-foreground">
+                  {p.tier} · Level {p.level} · {(p.categories ?? []).join(", ")}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            새로고침 버튼을 눌러 AI 추천 문제를 불러오세요
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

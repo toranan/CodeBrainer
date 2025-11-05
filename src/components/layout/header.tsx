@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 
 interface User {
@@ -14,6 +14,7 @@ interface User {
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -65,8 +66,17 @@ export function Header() {
               </div>
             ) : (
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Link href="/auth/signup" className="hover:text-primary">회원가입</Link>
-                <Link href="/auth/signin" className="hover:text-primary">로그인</Link>
+                <Link href="/mypage" className="hover:text-primary">마이페이지</Link>
+                {pathname === "/auth/signin" ? (
+                  <Link href="/auth/signup" className="hover:text-primary">회원가입</Link>
+                ) : pathname === "/auth/signup" ? (
+                  <Link href="/auth/signin" className="hover:text-primary">로그인</Link>
+                ) : (
+                  <>
+                    <Link href="/auth/signup" className="hover:text-primary">회원가입</Link>
+                    <Link href="/auth/signin" className="hover:text-primary">로그인</Link>
+                  </>
+                )}
               </div>
             )}
           </>
