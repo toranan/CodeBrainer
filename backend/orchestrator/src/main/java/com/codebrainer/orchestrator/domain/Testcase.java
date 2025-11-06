@@ -19,19 +19,20 @@ public class Testcase {
     @JoinColumn(name = "problem_id", nullable = false)
     private Problem problem;
 
-    @Column(name = "case_no", nullable = false)
-    private Integer caseNo;
+    // id랑 동일 역할
+    // @Column(name = "case_no", nullable = false)
+    // private Integer caseNo;
 
-    @Column(name = "in_path", nullable = false)
-    private String inputPath;
+    @Column(name = "in", nullable = false)
+    private String in;
 
-    @Column(name = "out_path", nullable = false)
-    private String outputPath;
+    @Column(name = "out", nullable = false)
+    private String out;
 
     @Column(name = "is_hidden", nullable = false)
     private Boolean hidden;
 
-    @Column(columnDefinition = "text")
+    @Column(name = "explanation", columnDefinition = "text")
     private String explanation;
 
     @Builder
