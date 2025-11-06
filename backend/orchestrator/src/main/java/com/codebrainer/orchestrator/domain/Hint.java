@@ -6,6 +6,8 @@ import lombok.*;
 import java.util.List;
 import java.util.ArrayList;
 
+import com.codebrainer.orchestrator.domain.Problem;
+
 @Entity
 @Getter
 @Setter
@@ -15,34 +17,53 @@ import java.util.ArrayList;
 public class Hint {
 
     @Id
+    @Column(name = "problem_id")
     private Long problemId;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
-    @JoinColumn(name = "problem_id")
-    private Problem problem;
+    @Id
+    @Column(name = "hint_order")
+    private Integer hintOrder;
 
-    // @Column
-    // private String source = "manual";
+    @Column(name = "hint1_path", columnDefinition = "TEXT")
+    private String hint1Path;
+    
+    @Column(name = "hint2_path", columnDefinition = "TEXT")
+    private String hint2Path;
 
-    @ElementCollection
-    @CollectionTable(name = "hint_list", joinColumns = @JoinColumn(name = "problem_id"))
-    @Column(name = "hint_text")
-    @OrderColumn(name = "hint_order")
-    private List<String> hints = new ArrayList<>();
+    @Column(name = "hint3_path", columnDefinition = "TEXT")
+    private String hint3Path;
+
+    @Column(name = "hint4_path", columnDefinition = "TEXT")
+    private String hint4Path;
 
     @Builder
-    public Hint(Long id, Problem problem, List<String> hints) {
-        this.id = id;
-        this.problem = problem;
-        int level = problem.getLevel();
-        
-        List<String> temp = (hints != null) ? new ArrayList<>(hints) : new ArrayList<>();
-    
-        // 개수 맞추기
-        while (temp.size() < level) temp.add("");
+    public Hint(Problem problem, Integer hintOrder, List<String> hints) {
+        this.problemId = problem.getId();
+        this.hintOrder = hintOrder;
 
-        this.hints = temp;
+        if (hintOrder > hints.size()) {
+            setPathField(null);
+            return;
+        }
+
+        String content = hints.get(hintOrder - 1);
+
+        String path = "../storage/hints/" + problem.getId() + "/";
+        String filename = "hint_" + hintOrder + ".txt";
+        String fullPath = path + filename;
+
+        new File(path).mkdirs();
+        try (FileWriter writer = new FileWriter(fullPath)) {
+            writer.write(content);
+        } catch (IOException e) {
+            throw new RuntimeException("힌트 파일 저장 실패", e);
+        }
+        switch (hintOrder) {
+            case 1 -> this.hint1Path = path;
+            case 2 -> this.hint2Path = path;
+            case 3 -> this.hint3Path = path;
+            case 4 -> this.hint4Path = path;
+            default -> {}
+        }
     }
 }
-

@@ -8,6 +8,12 @@ from pprint import pprint
 from datetime import date, datetime
 from dotenv import load_dotenv
 
+# https://solved.ac/problems/level/19?sort=solved&direction=desc&page=1 레벨 1부터 19까지 돌린다.
+# a[href^="https://www.acmicpc.net/problem/"] 이걸로 링크 접근해서 하나씩 긁어오기
+# 한 레벨 당 20문제씩
+
+
+
 # .env 파일 load
 load_dotenv()
 API_HOST = os.getenv("API_HOST")
@@ -60,17 +66,17 @@ seen_in_batch = set()
 last_week_date = 20090830
 global current_week_date
 
-base_url = "https://dgucoop.dongguk.edu"
-url = base_url + "/store/store.php?w=4&l=2&j={}"
+base_url = "https://www.acmicpc.net/problem"
+url = base_url + "/{id}"
 
-restaurants = []
+problems = []
 
 def to_menu(id, campus, name):
     if not id or not name: 
         return
     if id in seen_in_batch:
         return
-    restaurants.append({
+    problems.append({
         "restaurant_id": id,
         "univ": "Dongguk",
         "campus": campus,
@@ -83,17 +89,24 @@ j = 0
 existing_ids = get_existing_ids() 
 
 while True:
-    restaurants  = []
+    problem  = []
     response = requests.get(url.format(j))
 
     if response.status_code == 200:
         html = response.content.decode("cp949")
         soup = BeautifulSoup(html, "html.parser")
         
-        cw = soup.select_one(".menu_date")
-        current_week = cw.get_text(strip=True) if cw else ""
-        current_week_date = to_int(current_week)
-        if current_week_date is None:
+        title = soup.select_one(".problem_title").get_text()
+        ms = soup.select_one("#problem-info > tbody > tr > td:nth-child(1)").get_text(strip=True) if cw else "" # 만약 초 면 ms로 변환
+        mem = soup.select_one("#problem-info > tbody > tr > td:nth-child(2)").get_text(strip=True) if cw else "" # 단위 생각하기
+        level = soup.select_one("body > div.wrapper > div.container.content > div.row > div:nth-child(3) > div > blockquote > span").get_text() # 이거 안 될 수도..?
+        description = soup.select(".problem_description").get_text()
+        inp = soup.select(".input").get_text() # 이거 예외처리
+        outp = soup.select(".output").get_text()
+        in_ex = soup.select(".sampleinput1").get_text()
+        out_ex = soup.select(".sampleoutput1").get_text()
+        algorithm = soup.select("#problem_tags > ul").get_text() # 이것도 정해진 형식대로 저장
+        if soup is None:
             print("주차 파싱 실패. 중단합니다.")
             break
         if current_week_date < last_week_date:

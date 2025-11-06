@@ -11,16 +11,15 @@ import lombok.*;
 @AllArgsConstructor
 @Table(name = "feedbacks")
 public class Feedback {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "submission_id")
+    private Long submissionId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "submission_id", nullable = false)
-    private String submissionId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @MapsId   // PK를 FK로 사용한다는 의미
+    @JoinColumn(name = "submission_id")
+    private Submission submission;
 
-    @Column(name = "advice", nullable = false)
+    @Column(name = "advice", nullable = false, columnDefinition = "TEXT")
     private String advice;
 }
-
