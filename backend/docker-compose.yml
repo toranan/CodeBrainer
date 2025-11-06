@@ -18,6 +18,7 @@ services:
       SPRING_DATASOURCE_USERNAME: codebrainer
       SPRING_DATASOURCE_PASSWORD: codebrainer
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
       STORAGE_BASE_PATH: /data/storage
       JUDGE0_API_URL: http://judge0:2358
       RABBITMQ_HOST: rabbitmq
