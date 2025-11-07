@@ -3,10 +3,13 @@ const orchestratorBaseUrl = process.env.ORCHESTRATOR_BASE_URL ?? "http://localho
 
 async function orchestratorFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${orchestratorBaseUrl}${path}`;
+  console.log(`[Orchestrator] 요청: ${url}`);
   const response = await fetch(url, init);
   if (!response.ok) {
+    console.error(`[Orchestrator] 실패: ${url} -> ${response.status}`);
     throw new Error(`Orchestrator 요청 실패: ${response.status}`);
   }
+  console.log(`[Orchestrator] 성공: ${url}`);
   return (await response.json()) as T;
 }
 

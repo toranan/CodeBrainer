@@ -8,12 +8,85 @@ import {
   waitForBatchSubmissions,
   type Judge0Submission,
 } from "@/server/judge0-client"
+import { orchestratorFetch } from "@/server/orchestrator-client"
 
 interface RunRequest {
   problemId: string
   language: string
   code: string
   mode?: "run" | "submit"
+}
+
+interface OrchestratorSubmissionResponse {
+  submissionId: number
+  status: string
+}
+
+interface OrchestratorSubmissionDetail {
+  submissionId: number
+  status: string
+  result: {
+    compile: {
+      ok: boolean
+      message: string | null
+    }
+    summary: string
+    tests: string
+  } | null
+}
+
+// Orchestrator API로 제출 생성 및 결과 폴링
+async function submitToOrchestrator(
+  problemId: number,
+  langId: string,
+  code: string,
+): Promise<OrchestratorSubmissionDetail> {
+  // 1. 제출 생성
+  const createResponse = await orchestratorFetch<OrchestratorSubmissionResponse>(
+    "/api/submissions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        problemId,
+        langId,
+        code,
+      }),
+    },
+  )
+
+  const submissionId = createResponse.submissionId
+
+  // 2. 제출 완료까지 폴링 (최대 60초)
+  const maxAttempts = 60
+  const pollInterval = 1000 // 1초
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const detail = await orchestratorFetch<OrchestratorSubmissionDetail>(
+      `/api/submissions/${submissionId}`,
+    )
+
+    // COMPLETED 상태면 결과 반환
+    if (detail.status === "COMPLETED") {
+      return detail
+    }
+
+    // QUEUED, RUNNING 상태면 계속 대기
+    if (detail.status === "QUEUED" || detail.status === "RUNNING") {
+      await new Promise((resolve) => setTimeout(resolve, pollInterval))
+      continue
+    }
+
+    // 기타 상태 (에러 등)면 즉시 반환
+    return detail
+  }
+
+  // 타임아웃 시 마지막 상태 반환
+  return await orchestratorFetch<OrchestratorSubmissionDetail>(
+    `/api/submissions/${submissionId}`,
+  )
 }
 
 export async function POST(request: Request) {
@@ -41,33 +114,59 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "문제를 찾을 수 없습니다." }, { status: 404 })
   }
 
-  // run 모드일 경우 첫 번째 테스트케이스만, submit 모드일 경우 모든 테스트케이스
-  const testcasesToRun =
-    body.mode === "run" ? problem.testcases.slice(0, 1) : problem.testcases
+  // submit 모드일 경우 Orchestrator API 사용
+  if (body.mode === "submit") {
+    try {
+      // problem.detail.id를 숫자로 변환 (Orchestrator는 숫자 ID 필요)
+      const problemNumericId = parseInt(problem.detail.id, 10)
+      if (isNaN(problemNumericId)) {
+        return NextResponse.json(
+          { error: "문제 ID를 숫자로 변환할 수 없습니다." },
+          { status: 400 },
+        )
+      }
 
-  // Judge0 제출 생성
+      const orchestratorDetail = await submitToOrchestrator(
+        problemNumericId,
+        languageUpper,
+        body.code,
+      )
+
+      // Orchestrator 응답을 프론트엔드 형식으로 변환
+      return formatOrchestratorResponse(orchestratorDetail, problem.testcases)
+    } catch (error) {
+      console.error("Orchestrator 제출 오류:", error)
+      return NextResponse.json(
+        {
+          error: "제출 중 오류가 발생했습니다.",
+          details: error instanceof Error ? error.message : String(error),
+        },
+        { status: 500 },
+      )
+    }
+  }
+
+  // run 모드는 기존 로직 유지 (빠른 피드백을 위해 Judge0 직접 호출)
+  const testcasesToRun = problem.testcases.slice(0, 1)
+
   const submissions: Judge0Submission[] = testcasesToRun.map((testcase) => ({
     source_code: body.code,
     language_id: languageId,
     stdin: testcase.input,
     expected_output: testcase.output,
-    cpu_time_limit: 2.0, // 2초
-    wall_time_limit: 5.0, // 5초
-    memory_limit: 256000, // 256MB (kilobytes)
+    cpu_time_limit: 2.0,
+    wall_time_limit: 5.0,
+    memory_limit: 256000,
   }))
 
   try {
-    // 배치 제출 생성
     const tokens = await createBatchSubmissions(submissions)
-
-    // 결과 대기 (최대 30초)
     const judge0Results = await waitForBatchSubmissions(
       tokens.map((t) => t.token),
       30,
       1000,
     )
 
-    // 결과 변환
     const results = judge0Results.map((result, index) => {
       const verdict = mapStatusToVerdict(result.status.id)
       const testcase = testcasesToRun[index]
@@ -83,7 +182,6 @@ export async function POST(request: Request) {
       }
     })
 
-    // 전체 상태 결정
     let finalStatus = "AC"
     const hasCompileError = results.some((r) => r.verdict === "CE")
     const hasRuntimeError = results.some((r) => r.verdict === "RE")
@@ -100,7 +198,6 @@ export async function POST(request: Request) {
       finalStatus = "WA"
     }
 
-    // 컴파일 로그 추출
     const compileLog = results.find((r) => r.compileOutput)?.compileOutput
 
     return NextResponse.json({
@@ -118,4 +215,67 @@ export async function POST(request: Request) {
       { status: 500 },
     )
   }
+}
+
+// Orchestrator 응답을 프론트엔드 형식으로 변환
+function formatOrchestratorResponse(
+  detail: OrchestratorSubmissionDetail,
+  testcases: Array<{ id: string }>,
+): NextResponse {
+  if (!detail.result) {
+    return NextResponse.json({
+      status: detail.status,
+      results: [],
+      compileLog: null,
+    })
+  }
+
+  // JSON 문자열 파싱
+  let summary: any = {}
+  let tests: any[] = []
+
+  try {
+    summary = typeof detail.result.summary === "string" 
+      ? JSON.parse(detail.result.summary) 
+      : detail.result.summary
+    
+    tests = typeof detail.result.tests === "string"
+      ? JSON.parse(detail.result.tests)
+      : detail.result.tests
+  } catch (e) {
+    console.error("결과 파싱 오류:", e)
+  }
+
+  // 테스트 결과 매핑
+  const results = tests.map((test: any, index: number) => {
+    const testcaseId = test.testcaseId ?? testcases[index]?.id ?? `test-${index + 1}`
+    return {
+      testcaseId,
+      verdict: test.verdict ?? "PENDING",
+      timeMs: test.timeMs ?? 0,
+      memoryKb: test.memoryKb ?? 0,
+      stderr: test.stderr ?? undefined,
+      stdout: test.stdout ?? undefined,
+    }
+  })
+
+  // 최종 상태 결정
+  let finalStatus = "AC"
+  if (!detail.result.compile.ok) {
+    finalStatus = "CE"
+  } else if (results.some((r: any) => r.verdict === "WA")) {
+    finalStatus = "WA"
+  } else if (results.some((r: any) => r.verdict === "TLE")) {
+    finalStatus = "TLE"
+  } else if (results.some((r: any) => r.verdict === "RE")) {
+    finalStatus = "RE"
+  } else if (results.some((r: any) => r.verdict === "MLE")) {
+    finalStatus = "MLE"
+  }
+
+  return NextResponse.json({
+    status: finalStatus,
+    results,
+    compileLog: detail.result.compile.message ?? undefined,
+  })
 }

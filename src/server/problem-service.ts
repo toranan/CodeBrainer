@@ -203,56 +203,18 @@ function getSeedProblemBySlug(slug: string): { detail: ProblemDetail; testcases:
   return { detail, testcases };
 }
 
+// Prisma Problem 모델은 이제 Orchestrator에서 관리합니다.
+// 이 함수들은 더 이상 사용되지 않으며, Orchestrator API와 Seed 데이터만 사용합니다.
 async function getPrismaProblemBySlug(slug: string) {
-  const client = await getPrismaClient();
-  if (!client) return null;
-  try {
-    const problem = await client.problem.findUnique({
-      where: { slug },
-      include: {
-        hints: {
-          orderBy: { stage: "asc" },
-        },
-        solutions: true,
-        testcases: true,
-      },
-    });
-    if (!problem) return null;
-
-    const detail = normalizeProblemDetail(problem);
-    const testcases = normalizeTestcases(problem.testcases, problem.slug);
-
-    return { detail, testcases };
-  } catch (error) {
-    console.warn("Prisma 연결에 실패했습니다. Seed 데이터를 사용합니다.", error);
-    return null;
-  }
+  // Prisma는 이제 인증(User, Account, Session)만 관리합니다.
+  // Problem 데이터는 Orchestrator API를 통해 조회합니다.
+  return null;
 }
 
 async function getPrismaProblemById(id: string) {
-  const client = await getPrismaClient();
-  if (!client) return null;
-  try {
-    const problem = await client.problem.findUnique({
-      where: { id },
-      include: {
-        hints: {
-          orderBy: { stage: "asc" },
-        },
-        solutions: true,
-        testcases: true,
-      },
-    });
-    if (!problem) return null;
-
-    const detail = normalizeProblemDetail(problem);
-    const testcases = normalizeTestcases(problem.testcases, problem.slug);
-
-    return { detail, testcases };
-  } catch (error) {
-    console.warn("Prisma 연결에 실패했습니다. Seed 데이터를 사용합니다.", error);
-    return null;
-  }
+  // Prisma는 이제 인증(User, Account, Session)만 관리합니다.
+  // Problem 데이터는 Orchestrator API를 통해 조회합니다.
+  return null;
 }
 
 export async function fetchProblemDetailBySlug(slug: string): Promise<ProblemDetail | null> {
