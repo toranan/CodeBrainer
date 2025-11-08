@@ -6,6 +6,7 @@ import { ReactNode } from "react";
 import "./globals.css";
 
 import { AppProviders } from "@/components/providers/app-providers";
+import { ProblemHoverMenu } from "@/components/problem-hover-menu";
 // import { auth } from "@/lib/auth";
 
 const geistSans = Geist({
@@ -33,15 +34,13 @@ async function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b bg-white/90 backdrop-blur">
+      <header className="border-b bg-white/90 backdrop-blur relative z-10">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/" className="text-xl font-semibold text-primary">
             CodeBrainer
           </Link>
           <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <Link href="/problems" className="hover:text-primary">
-              문제 목록
-            </Link>
+            <ProblemHoverMenu />
             <Link href="/mock" className="hover:text-primary">
               모의고사
             </Link>
