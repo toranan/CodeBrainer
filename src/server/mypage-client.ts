@@ -45,6 +45,7 @@ export async function getReview(params: {
   q.set("userId", String(params.userId));
   q.set("baseProblemId", String(params.baseProblemId));
   if (params.limit != null) q.set("limit", String(params.limit));
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   return orchestratorFetch<{ baseProblem: any; recommendations: any[] }>(
     `/api/me/review?${q.toString()}`
   );
