@@ -205,12 +205,14 @@ function getSeedProblemBySlug(slug: string): { detail: ProblemDetail; testcases:
 
 // Prisma Problem 모델은 이제 Orchestrator에서 관리합니다.
 // 이 함수들은 더 이상 사용되지 않으며, Orchestrator API와 Seed 데이터만 사용합니다.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function getPrismaProblemBySlug(slug: string) {
   // Prisma는 이제 인증(User, Account, Session)만 관리합니다.
   // Problem 데이터는 Orchestrator API를 통해 조회합니다.
   return null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function getPrismaProblemById(id: string) {
   // Prisma는 이제 인증(User, Account, Session)만 관리합니다.
   // Problem 데이터는 Orchestrator API를 통해 조회합니다.
@@ -222,12 +224,7 @@ export async function fetchProblemDetailBySlug(slug: string): Promise<ProblemDet
     const detail = await orchestratorFetch<OrchestratorProblemDetail>(`/api/problems/${slug}`);
     return mapOrchestratorDetailToProblem(detail).detail;
   } catch (error) {
-    console.warn("Orchestrator 문제 상세 호출 실패. Prisma/seed로 대체합니다.", error);
-  }
-
-  const prismaProblem = await getPrismaProblemBySlug(slug);
-  if (prismaProblem) {
-    return prismaProblem.detail;
+    console.warn("Orchestrator 문제 상세 호출 실패. Seed로 대체합니다.", error);
   }
 
   const seed = getSeedProblemBySlug(slug);

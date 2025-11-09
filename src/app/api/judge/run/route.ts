@@ -231,14 +231,18 @@ function formatOrchestratorResponse(
   }
 
   // JSON 문자열 파싱
-  let summary: any = {}
-  let tests: any[] = []
+  type TestResult = {
+    testcaseId?: string
+    verdict?: string
+    timeMs?: number
+    memoryKb?: number
+    stderr?: string
+    stdout?: string
+  }
+
+  let tests: TestResult[] = []
 
   try {
-    summary = typeof detail.result.summary === "string" 
-      ? JSON.parse(detail.result.summary) 
-      : detail.result.summary
-    
     tests = typeof detail.result.tests === "string"
       ? JSON.parse(detail.result.tests)
       : detail.result.tests
@@ -247,7 +251,7 @@ function formatOrchestratorResponse(
   }
 
   // 테스트 결과 매핑
-  const results = tests.map((test: any, index: number) => {
+  const results = tests.map((test: TestResult, index: number) => {
     const testcaseId = test.testcaseId ?? testcases[index]?.id ?? `test-${index + 1}`
     return {
       testcaseId,
@@ -263,13 +267,13 @@ function formatOrchestratorResponse(
   let finalStatus = "AC"
   if (!detail.result.compile.ok) {
     finalStatus = "CE"
-  } else if (results.some((r: any) => r.verdict === "WA")) {
+  } else if (results.some((r) => r.verdict === "WA")) {
     finalStatus = "WA"
-  } else if (results.some((r: any) => r.verdict === "TLE")) {
+  } else if (results.some((r) => r.verdict === "TLE")) {
     finalStatus = "TLE"
-  } else if (results.some((r: any) => r.verdict === "RE")) {
+  } else if (results.some((r) => r.verdict === "RE")) {
     finalStatus = "RE"
-  } else if (results.some((r: any) => r.verdict === "MLE")) {
+  } else if (results.some((r) => r.verdict === "MLE")) {
     finalStatus = "MLE"
   }
 
