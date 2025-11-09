@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 export default function SignInPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showSignupBanner, setShowSignupBanner] = useState(false);
   const [formData, setFormData] = useState({
     emailOrUsername: "",
     password: "",
@@ -32,6 +33,7 @@ export default function SignInPage() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
+    setShowSignupBanner(false);
   };
 
   const validate = (): boolean => {
@@ -72,7 +74,7 @@ export default function SignInPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          toast.error("아이디 또는 비밀번호가 올바르지 않습니다");
+          setShowSignupBanner(true);
           setErrors({ emailOrUsername: " ", password: "아이디 또는 비밀번호가 올바르지 않습니다" });
         } else {
           toast.error(data.message || "로그인 중 오류가 발생했습니다");
@@ -87,6 +89,9 @@ export default function SignInPage() {
         name: data.name,
         role: data.role,
       }));
+
+      // 헤더에 로그인 상태 변경 알림
+      window.dispatchEvent(new Event("authChange"));
 
       toast.success("로그인 성공!");
       setTimeout(() => {
@@ -113,6 +118,26 @@ export default function SignInPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {showSignupBanner && (
+            <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-medium text-orange-900">회원정보가 없습니다</p>
+                  <p className="text-sm text-orange-700 mt-1">
+                    입력하신 정보와 일치하는 계정을 찾을 수 없습니다
+                  </p>
+                </div>
+                <Link href="/auth/signup">
+                  <Button
+                    type="button"
+                    className="ml-4 bg-orange-600 hover:bg-orange-700"
+                  >
+                    회원가입하기
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="emailOrUsername">아이디</Label>

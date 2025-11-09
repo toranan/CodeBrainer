@@ -25,20 +25,39 @@ export function Header() {
         const userJson = localStorage.getItem("user");
         if (token && userJson) {
           setUser(JSON.parse(userJson));
+        } else {
+          setUser(null);
         }
       } catch (error) {
         console.error("인증 확인 에러:", error);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
     };
+
     checkAuth();
+
+    // storage 변경 감지 (다른 탭이나 창에서 변경 시)
+    window.addEventListener("storage", checkAuth);
+
+    // 커스텀 이벤트 감지 (같은 페이지 내에서 로그인/로그아웃 시)
+    const handleAuthChange = () => {
+      checkAuth();
+    };
+    window.addEventListener("authChange", handleAuthChange);
+
+    return () => {
+      window.removeEventListener("storage", checkAuth);
+      window.removeEventListener("authChange", handleAuthChange);
+    };
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
+    window.dispatchEvent(new Event("authChange"));
     toast.success("로그아웃되었습니다");
     router.push("/");
     router.refresh();
@@ -53,12 +72,17 @@ export function Header() {
         <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
           <Link href="/problems" className="hover:text-primary">문제 목록</Link>
           <Link href="/mock" className="hover:text-primary">모의고사</Link>
-          <Link href="/admin" className="hover:text-primary">관리자 콘솔</Link>
+          {user?.role === "ADMIN" && (
+            <Link href="/admin" className="hover:text-primary text-orange-600 font-semibold">
+              관리자 콘솔
+            </Link>
+          )}
         </nav>
         {!isLoading && (
           <>
             {user ? (
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Link href="/me" className="hover:text-primary">마이페이지</Link>
                 <span className="font-medium text-slate-700">{user.name || user.email}</span>
                 <button onClick={handleLogout} className="text-primary hover:underline">
                   로그아웃
@@ -66,7 +90,6 @@ export function Header() {
               </div>
             ) : (
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Link href="/mypage" className="hover:text-primary">마이페이지</Link>
                 {pathname === "/auth/signin" ? (
                   <Link href="/auth/signup" className="hover:text-primary">회원가입</Link>
                 ) : pathname === "/auth/signup" ? (
