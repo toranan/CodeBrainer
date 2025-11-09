@@ -6,7 +6,7 @@ import { ReactNode } from "react";
 import "./globals.css";
 
 import { AppProviders } from "@/components/providers/app-providers";
-import { ProblemHoverMenu } from "@/components/problem-hover-menu";
+import { Header } from "@/components/layout/header";
 // import { auth } from "@/lib/auth";
 
 const geistSans = Geist({
@@ -34,30 +34,7 @@ async function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b bg-white/90 backdrop-blur relative z-10">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="text-xl font-semibold text-primary">
-            CodeBrainer
-          </Link>
-          <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <ProblemHoverMenu />
-            <Link href="/mock" className="hover:text-primary">
-              모의고사
-            </Link>
-            <Link href="/admin" className="hover:text-primary">
-              관리자 콘솔
-            </Link>
-          </nav>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <Link href="/me" className="hover:text-primary">
-              마이페이지
-            </Link>
-            <Link href="/auth/signin" className="hover:text-primary">
-              로그인
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header />
       <main className="flex-1 bg-gradient-to-b from-slate-50 via-white to-slate-50">
         {children}
       </main>
