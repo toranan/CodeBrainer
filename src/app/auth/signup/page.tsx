@@ -73,7 +73,7 @@ export default function SignUpPage() {
         toast.error("이미 사용 중인 아이디입니다");
         setErrors((prev) => ({ ...prev, username: data.message }));
       }
-    } catch (error) {
+    } catch {
       toast.error("아이디 중복 확인 중 오류가 발생했습니다");
     }
   };
@@ -150,7 +150,7 @@ export default function SignUpPage() {
 
       toast.success("회원가입이 완료되었습니다!");
       setTimeout(() => router.push("/"), 1000);
-    } catch (error) {
+    } catch {
       toast.error("서버와 통신 중 오류가 발생했습니다");
     } finally {
       setIsLoading(false);
