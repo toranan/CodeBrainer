@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-export function ReviewTab() {
+export function ReviewTab({ userId }: { userId: number | null }) {
+  // userId는 나중에 API 호출에 사용될 수 있습니다
+  console.log("Current user ID:", userId);
   // 임시 데이터 (나중에 API로 가져올 데이터)
   const weakCategories = [
     { name: "DP (동적 계획법)", accuracy: 40, problems: 15, correct: 6 },

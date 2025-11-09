@@ -38,7 +38,7 @@ export default function MyPage() {
       const user = JSON.parse(userJson);
       setUserId(user.userId);
       setUserInfo(user);
-    } catch (error) {
+    } catch {
       router.push("/auth/signin");
     }
   }, [router]);

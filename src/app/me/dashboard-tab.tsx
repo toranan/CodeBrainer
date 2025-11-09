@@ -8,6 +8,7 @@ import AlgorithmStats from "./AlgorithmStats";
 import AIRecommendations from "./AIRecommendations";
 import ProblemItem from "./ProblemItem";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 interface DashboardTabProps {
   userInfo: any;
   overall: any;

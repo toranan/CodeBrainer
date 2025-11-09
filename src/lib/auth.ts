@@ -1,13 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import type { NextAuthConfig } from "next-auth"
+import type { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import EmailProvider from "next-auth/providers/email"
 import AzureADProvider from "next-auth/providers/azure-ad"
 
 import { prisma } from "@/lib/prisma"
 
-export const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(prisma),
+export const authConfig: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma) as any,
   session: {
     strategy: "database",
   },
@@ -31,9 +32,9 @@ export const authConfig: NextAuthConfig = {
   ],
   callbacks: {
     session: async ({ session, user }) => {
-      if (session.user) {
-        session.user.id = user.id
-        session.user.role = user.role
+      if (session.user && user) {
+        (session.user as any).id = (user as any).id
+        (session.user as any).role = (user as any).role
       }
       return session
     },

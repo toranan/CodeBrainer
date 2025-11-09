@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
+import { ProblemHoverMenu } from "@/components/problem-hover-menu";
 
 interface User {
   userId: number;
@@ -70,7 +71,7 @@ export function Header() {
           CodeBrainer
         </Link>
         <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-          <Link href="/problems" className="hover:text-primary">문제 목록</Link>
+          <ProblemHoverMenu />
           <Link href="/mock" className="hover:text-primary">모의고사</Link>
           {user?.role === "ADMIN" && (
             <Link href="/admin" className="hover:text-primary text-orange-600 font-semibold">
