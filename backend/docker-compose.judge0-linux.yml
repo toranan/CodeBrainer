@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    platform: linux/amd64
+    restart: unless-stopped
+    privileged: true
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+    ports:
+      - "2358:2358"
+    depends_on:
+      - postgres
+      - redis
+
+  judge0-workers:
+    image: judge0/judge0:1.13.1
+    platform: linux/amd64
+    restart: unless-stopped
+    privileged: true
+    command: ["./scripts/workers"]
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+    depends_on:
+      - postgres
+      - redis
+      - judge0-server

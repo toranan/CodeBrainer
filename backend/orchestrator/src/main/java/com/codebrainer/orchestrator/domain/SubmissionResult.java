@@ -9,6 +9,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "submission_results")
@@ -28,10 +30,12 @@ public class SubmissionResult {
     @Column(name = "compile_msg")
     private String compileMessage;
 
-    @Column(name = "summary_json", columnDefinition = "jsonb", nullable = false)
+    @Column(name = "summary_json", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
     private String summaryJson;
 
-    @Column(name = "tests_json", columnDefinition = "jsonb", nullable = false)
+    @Column(name = "tests_json", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
     private String testsJson;
 
     public Long getId() {
