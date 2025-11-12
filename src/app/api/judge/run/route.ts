@@ -281,5 +281,6 @@ function formatOrchestratorResponse(
     status: finalStatus,
     results,
     compileLog: detail.result.compile.message ?? undefined,
+    submissionId: detail.submissionId,
   })
 }
