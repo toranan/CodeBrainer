@@ -59,7 +59,7 @@ export default function SignUpPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/auth/check-username?username=${encodeURIComponent(formData.username)}`
+        `http://localhost:8081/api/auth/check-username?username=${encodeURIComponent(formData.username)}`
       );
       const data = await response.json();
       
@@ -125,7 +125,7 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8080/api/auth/signup", {
+      const response = await fetch("http://localhost:8081/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
