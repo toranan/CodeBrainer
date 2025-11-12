@@ -50,3 +50,8 @@ logging:
     org.springframework.web.client: DEBUG
     org.apache.http: DEBUG
 
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-1.5-pro}
+  enabled: ${GEMINI_ENABLED:false}
+
