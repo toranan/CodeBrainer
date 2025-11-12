@@ -220,7 +220,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
 
       if (data.status === "AC") {
         toast.success("정답입니다! AI 리뷰를 준비중이에요.");
-        await fetchAiReview();
+        await fetchAiReview(data.submissionId);
       } else {
         toast("정답이 아닙니다. 결과 패널을 확인하세요.");
       }
@@ -231,7 +231,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
     }
   };
 
-  const fetchAiReview = async () => {
+  const fetchAiReview = async (submissionId?: number) => {
     setReviewState({ status: "loading" });
     try {
       const res = await fetch("/api/ai/review", {
@@ -243,6 +243,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           problemId: problem.id,
           language,
           userCode: currentCode,
+          submissionId,
         }),
       });
 
