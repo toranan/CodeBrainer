@@ -3,20 +3,23 @@ spring:
     name: codebrainer-backend
   
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/codebrainer}
-    username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:0000}
+    url: ${DATABASE_URL:jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres}
+    username: ${DATABASE_USERNAME:postgres.sqwobsmtrgjuhgymfwtl}
+    password: ${DATABASE_PASSWORD:qpwoe1234}
     driver-class-name: org.postgresql.Driver
   
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update  # 개발용: 스키마 업데이트만 하고 데이터 유지
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
+  
+  flyway:
+    enabled: false  # 개발 중에는 Hibernate로만 스키마 관리
   
   # CORS 설정 (Next.js 프론트엔드와 통신)
   web:

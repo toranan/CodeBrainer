@@ -9,7 +9,7 @@ import com.codebrainer.orchestrator.domain.Problem;
 @AllArgsConstructor
 @Getter
 @Setter
-public class FeedbackeResponse {
+public class FeedbackResponse {
     private Long submissionId;
     private String advice;
 
