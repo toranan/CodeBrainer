@@ -1,144 +1,130 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-import re
 import requests
 import os
+import json
 from bs4 import BeautifulSoup
-from pprint import pprint
-from datetime import date, datetime
 from dotenv import load_dotenv
 
 # https://solved.ac/problems/level/19?sort=solved&direction=desc&page=1 레벨 1부터 19까지 돌린다.
 # a[href^="https://www.acmicpc.net/problem/"] 이걸로 링크 접근해서 하나씩 긁어오기
 # 한 레벨 당 20문제씩
 
-
-
-# .env 파일 load
 load_dotenv()
 API_HOST = os.getenv("API_HOST")
 
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
+STATEMENT_DIR = os.getenv("STATEMENT_PATH", "./statements")
+os.makedirs(STATEMENT_DIR, exist_ok=True)
 
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    raise TypeError ("Type %s not serializable" % type(obj))
+BASE_BOJ = "https://www.acmicpc.net/problem"
+BASE_SOLVED = "https://solved.ac/problems/level/{level}?sort=solved&direction=desc&page=1"
 
-def to_int(week):
-    week_date = re.search(r'(\d{4})\.(\d{2})\.(\d{2})', week)
-    week_date_int = ''.join(week_date.groups())
-    return int(week_date_int)
-
-def mapping(name: str):
-    if not name: return None, None
-    raw = name
-
-    if "상록원" in raw:
-        if "3" in raw: return 3, "seoul"
-        if "2" in raw: return 2, "seoul"
-        if "1" in raw: return 1, "seoul"
-    if ("누리터" in raw) or ("일산" in raw) or ("BMC" in raw): return 4, "ilsan"
-    if "FLEX" in raw: return 5, "seoul"
-    if "남산" in raw: return 6, "seoul"
-    if "가든쿡" in raw: return 7, "seoul"
-    if "그루터기" in raw: return 8, "seoul"
-    if "아리수" in raw: return 9, "seoul"
-    if "코끼리" in raw: return 10, "seoul"
-    return None, None
-
-def get_or_none(seq, idx):
-    return seq[idx] if idx < len(seq) and seq[idx] else None
-
-def get_existing_ids():
-    try:
-        r = requests.get(f"{API_HOST}/api/v1/menu/restaurants/ids", timeout=10)
-        r.raise_for_status()
-        data = r.json()
-        # 숫자 보장
-        return {int(x) for x in data if x is not None}
-    except Exception as e:
-        print(f"기존 restaurantId 조회 실패: {e}")
-        return set()
-
-seen_in_batch = set()
-
-last_week_date = 20090830
-global current_week_date
+def save_statement(problem_id, text):
+    path = f"{STATEMENT_DIR}/{problem_id}.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"statement": text}, f, ensure_ascii=False)
+    return path
 
 base_url = "https://www.acmicpc.net/problem"
 url = base_url + "/{id}"
 
-problems = []
+def parse_boj_problem(problem_id):
+    url = f"{BASE_BOJ}/{problem_id}"
+    res = requests.get(url)
 
-def to_menu(id, campus, name):
-    if not id or not name: 
-        return
-    if id in seen_in_batch:
-        return
-    problems.append({
-        "restaurant_id": id,
-        "univ": "Dongguk",
-        "campus": campus,
-        "name": name,
-    })
-    seen_in_batch.add(id)
-    return
+    if res.status_code != 200:
+        print(f"BOJ 요청 실패 id={problem_id}")
+        return None
 
-j = 0
-existing_ids = get_existing_ids() 
+    html = res.content.decode("utf-8", errors="ignore")
+    soup = BeautifulSoup(html, "html.parser")
 
-while True:
-    problem  = []
-    response = requests.get(url.format(j))
+    title = soup.select_one(".problem_title").get_text(strip=True)
+    id = problem_id
+    time = soup.select_one("#problem-info > tbody > tr > td:nth-child(1)").get_text(strip=True) 
+    time_ms = time if time else "제한 없음" # 만약 초 면 ms로 변환
+    mem = soup.select_one("#problem-info > tbody > tr > td:nth-child(2)").get_text(strip=True)
+    mem_mb = mem if mem else "제한 없음" # 단위 생각하기
+    lev = soup.select_one("body > div.wrapper > div.container.content > div.row > div:nth-child(3) > div > blockquote > span").get_text()
+    level = lev if lev else ""
+    txt = soup.select_one(".problem_description").get_text()
+    description = txt if txt else ""
+    inp = soup.select_one(".input").get_text() # 이거 예외처리, 입력예시랑 합치기
+    input_format = inp if inp else ""
+    output_format = soup.select_one(".output").get_text()
+    algorithm = soup.select_one("#problem_tags > ul").get_text() # 이것도 정해진 형식대로 저장
+    statement_path = save_statement(problem_id, description)
 
-    if response.status_code == 200:
-        html = response.content.decode("cp949")
-        soup = BeautifulSoup(html, "html.parser")
-        
-        title = soup.select_one(".problem_title").get_text()
-        ms = soup.select_one("#problem-info > tbody > tr > td:nth-child(1)").get_text(strip=True) if cw else "" # 만약 초 면 ms로 변환
-        mem = soup.select_one("#problem-info > tbody > tr > td:nth-child(2)").get_text(strip=True) if cw else "" # 단위 생각하기
-        level = soup.select_one("body > div.wrapper > div.container.content > div.row > div:nth-child(3) > div > blockquote > span").get_text() # 이거 안 될 수도..?
-        description = soup.select(".problem_description").get_text()
-        inp = soup.select(".input").get_text() # 이거 예외처리
-        outp = soup.select(".output").get_text()
-        in_ex = soup.select(".sampleinput1").get_text()
-        out_ex = soup.select(".sampleoutput1").get_text()
-        algorithm = soup.select("#problem_tags > ul").get_text() # 이것도 정해진 형식대로 저장
-        if soup is None:
-            print("주차 파싱 실패. 중단합니다.")
-            break
-        if current_week_date < last_week_date:
-            print("break 조건 달성. 중단합니다.")
-            break
-        
-        table = soup.select_one('#sdetail > table:nth-of-type(2)')
-        names = [td.get_text(strip=True) for td in (table.select('td.menu_st'))]
-        for name in names:
-            id, campus = mapping(name)
-            if id is None:
-                continue
-            if id in existing_ids:
-                continue
-            to_menu(id, campus, name)
+    return {
+        "id": int(id),
+        "title": title,
+        "tier": level,
+        "time_ms": time_ms,
+        "mem_mb": mem_mb,
+        "categories": algorithm,
+        "input_format": input_format,
+        "output_format": output_format,
+        "statement_path": statement_path,
+    }
 
-        if restaurants:
-            try:
-                response = requests.post(f"{API_HOST}/api/v1/menu/restaurants", json=restaurants, timeout=10)
-                if response.status_code == 201:
-                    print(f"Save to DB, {restaurants}")
-                else:
-                    print(f"API 에러 - 상태코드: {response.status_code}, 응답: {response.text}")
-            except requests.exceptions.ConnectionError:
-                print(f"연결 에러: Spring 서버가 실행 중인지 확인하세요 ({API_HOST})")
-            except requests.exceptions.Timeout:
-                print(f"타임아웃 에러")
-            except Exception as e:
-                print(f"예상치 못한 에러: {e}")
+def main():
+    all_problems = []
+
+    for level in range(1, 20):  # 레벨 1~19
+        print(f"\n=== 레벨 {level} 문제 수집 중 ===")
+
+        url = BASE_SOLVED.format(level=level)
+        res = requests.get(url)
+
+        if res.status_code != 200:
+            print(f"solved.ac 접근 실패 (level={level})")
+            continue
+
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        problem_ids = []
+        for a in soup.find_all("a"):
+            href = a.get("href", "")
+            if "acmicpc.net/problem/" in href:
+                pid = href.split("/")[-1]
+                if pid.isdigit():
+                    problem_ids.append(pid)
+                    if len(problem_ids) == 20:
+                        break
+
+        print(f"문제 {len(problem_ids)}개:", problem_ids)
+
+        for pid in problem_ids:
+            print(f"파싱 중… {pid}")
+            data = parse_boj_problem(pid)
+            if data:
+                all_problems.append(data)
+                print(f"수집 완료: {pid}")
+
+    if all_problems:
+        try:
+            response = requests.post(f"{API_HOST}/api/problems/", json=all_problems, timeout=10)
+            if response.status_code == 201:
+                print(f"Save to DB, {all_problems}")
+            else:
+                print(f"API 에러 - 상태코드: {response.status_code}, 응답: {response.text}")
+        except requests.exceptions.ConnectionError:
+            print(f"연결 에러: Spring 서버가 실행 중인지 확인하세요 ({API_HOST})")
+        except requests.exceptions.Timeout:
+            print(f"타임아웃 에러")
+        except Exception as e:
+            print(f"예상치 못한 에러: {e}")
     else:
-        pprint(response)
+        print("저장할 문제 없음")
 
-    j -= 1
 
-last_week_date = current_week_date
+    # 최종 결과 저장
+    with open("problems.json", "w", encoding="utf-8") as f:
+        json.dump(all_problems, f, ensure_ascii=False, indent=2)
+
+
+
+    print("\n=== 전체 작업 완료 ===")
+    print("problems.json 파일 생성됨")
+
+
+if __name__ == "__main__":
+    main()
