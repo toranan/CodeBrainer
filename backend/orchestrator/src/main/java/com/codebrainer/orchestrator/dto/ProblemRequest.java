@@ -18,7 +18,6 @@ public class ProblemRequest {
     private Integer timeMs;
     private Integer memMb;
     private JsonNode categories;
-    private String constraints;
     private String inputFormat;
     private String outputFormat;
     private String statementPath;
