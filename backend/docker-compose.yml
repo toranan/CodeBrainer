@@ -6,22 +6,23 @@ services:
       context: ./orchestrator
       dockerfile: Dockerfile
     depends_on:
-      postgres:
-        condition: service_healthy
       rabbitmq:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/codebrainer
-      SPRING_DATASOURCE_USERNAME: codebrainer
-      SPRING_DATASOURCE_PASSWORD: codebrainer
+      SPRING_DATASOURCE_URL: jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
+      SPRING_DATASOURCE_USERNAME: postgres.sqwobsmtrgjuhgymfwtl
+      SPRING_DATASOURCE_PASSWORD: qpwoe1234
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
       STORAGE_BASE_PATH: /data/storage
-      JUDGE0_API_URL: http://3.27.95.194:2358
+      JUDGE0_API_URL: http://54.252.182.149:2358
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: guest
       RABBITMQ_PASSWORD: guest
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-pro}
+      GEMINI_ENABLED: ${GEMINI_ENABLED:-true}
     volumes:
       - orchestrator-storage:/data/storage
     ports:
