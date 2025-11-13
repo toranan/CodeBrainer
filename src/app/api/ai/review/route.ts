@@ -1,87 +1,124 @@
-// // import { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
+import { orchestratorFetch } from "@/server/orchestrator-client"
 
-// // interface ReviewRequest {
-// //   userCode: string
-// //   language: string
-// //   problemId: string
-// // }
+interface ReviewRequest {
+  userCode: string
+  language: string
+  problemId: string
+  submissionId?: number
+}
 
-// // export async function POST(request: Request) {
-// //   const body = (await request.json()) as ReviewRequest
+interface CodeReviewResponse {
+  reviewId: number
+  submissionId: number
+  reviewContent: string
+  rating: number | null
+  suggestions: string | null
+  createdAt: string
+}
 
-// //   if (!body.userCode || !body.language || !body.problemId) {
-// //     return NextResponse.json(
-// //       { error: "userCode, language, problemId는 필수입니다." },
-// //       { status: 400 }
-// //     )
-// //   }
+/**
+ * Gemini AI 리뷰 텍스트를 파싱하여 프론트엔드 형식으로 변환
+ */
+function parseReviewContent(reviewContent: string, code: string, language: string) {
+  const improvements: string[] = []
+  const altApproaches: string[] = []
 
-// //   // TODO: 실제 모범답안 비교 및 외부 AI 호출 로직 추가
-// //   return NextResponse.json({
-// //     improvements: [
-// //       "코드가 문제 요구사항을 만족합니다.",
-// //       "시간 복잡도가 O(n)으로 적절합니다.",
-// //     ],
-// //     altApproaches: [
-// //       "스택을 활용한 풀이도 동일한 결과를 얻을 수 있습니다.",
-// //       "reduce 함수를 사용한 함수형 접근을 고려해 보세요.",
-// //     ],
-// //     finalSolution: {
-// //       language: body.language,
-// //       code: body.userCode,
-// //       notes: "임시 AI 리뷰 응답입니다.",
-// //     },
-// //   })
-// // }
-// import { NextRequest, NextResponse } from "next/server";
-// import { reviewChain } from "@/server/ai/gemini";
+  // 개선사항 섹션 추출
+  const improvementsMatch = reviewContent.match(/개선.*?[:：]([\s\S]*?)(?=\n\n|\d\.|\z)/i)
+  if (improvementsMatch) {
+    const lines = improvementsMatch[1].trim().split('\n').filter(line => line.trim())
+    lines.forEach(line => {
+      const cleaned = line.replace(/^[-•*\d.)\s]+/, '').trim()
+      if (cleaned) improvements.push(cleaned)
+    })
+  }
 
-// export const runtime = "nodejs"; // Edge에서 Google SDK 에러 방지
+  // 대안적 접근 섹션 추출
+  const altMatch = reviewContent.match(/(?:대안|다른 방법|alternative).*?[:：]([\s\S]*?)(?=\n\n|\d\.|\z)/i)
+  if (altMatch) {
+    const lines = altMatch[1].trim().split('\n').filter(line => line.trim())
+    lines.forEach(line => {
+      const cleaned = line.replace(/^[-•*\d.)\s]+/, '').trim()
+      if (cleaned) altApproaches.push(cleaned)
+    })
+  }
 
-// type Req = {
-//   language: string;   // "javascript" | "python" | ...
-//   code: string;
-//   rubric?: string;    // 선택: 팀 코딩 컨벤션, 금칙 사항 등
-//   fewshots?: Array<{role:"human"|"ai"; content:string}>;
-// };
+  // 기본값 제공
+  if (improvements.length === 0) {
+    improvements.push("AI가 코드를 분석했습니다.")
+  }
+  if (altApproaches.length === 0) {
+    altApproaches.push("전체 리뷰 내용을 참고해주세요.")
+  }
 
-// export async function POST(req: NextRequest) {
-//   try {
-//     const body = (await req.json()) as Req;
+  return {
+    improvements,
+    altApproaches,
+    finalSolution: {
+      language,
+      code,
+      notes: reviewContent,
+    },
+  }
+}
 
-//     const fewshots =
-//       body.fewshots?.map(m => ({
-//         role: m.role === "human" ? "human" : "ai",
-//         content: m.content,
-//       })) ?? [
-//         // 기본 Few-shot 예시 1
-//         { role: "human", content:
-//           "언어: javascript\n요구사항: var 금지, 함수는 단일 책임\n대상 코드:\n```javascript\nvar x=1;function a(){return 1;}function b(){return 2;}\n```" },
-//         { role: "ai", content:
-//           JSON.stringify({
-//             summary:"var 사용, 책임 분리가 미흡합니다.",
-//             score: 62,
-//             issues:[
-//               {title:"var 사용",severity:"medium",detail:"블록 스코프 미보장",lineHints:[1]},
-//               {title:"함수 책임 분리 약함",severity:"low",detail:"테스트 용이성 저하",lineHints:[1]}
-//             ],
-//             suggestions:["let/const로 변경","함수 역할 분리 및 테스트 추가"]
-//           })
-//         }
-//       ];
+export async function POST(request: Request) {
+  const body = (await request.json()) as ReviewRequest
 
-//     const result = await reviewChain.invoke({
-//       language: body.language,
-//       rubric: body.rubric ?? "일반 웹 서비스 백엔드 품질 기준",
-//       code: body.code,
-//       fewshots,
-//     });
+  // submissionId가 있으면 해당 제출에 대한 리뷰 조회/생성
+  if (body.submissionId) {
+    try {
+      let codeReview: CodeReviewResponse
 
-//     return NextResponse.json(result, { status: 200 });
-//   } catch (err: any) {
-//     return NextResponse.json(
-//       { error: err?.message ?? "AI 리뷰 실패" },
-//       { status: 500 }
-//     );
-//   }
-// }
+      try {
+        // 기존 리뷰 조회
+        codeReview = await orchestratorFetch<CodeReviewResponse>(
+          `/api/code-reviews/submissions/${body.submissionId}`
+        )
+      } catch (error) {
+        // 리뷰가 없으면 생성
+        console.log("리뷰가 없어 새로 생성합니다:", body.submissionId)
+        codeReview = await orchestratorFetch<CodeReviewResponse>(
+          `/api/code-reviews/submissions/${body.submissionId}`,
+          {
+            method: "POST",
+          }
+        )
+      }
+
+      // 리뷰 텍스트 파싱 → FE 형식 변환
+      const parsedReview = parseReviewContent(
+        codeReview.reviewContent,
+        body.userCode,
+        body.language
+      )
+
+      return NextResponse.json(parsedReview)
+    } catch (error) {
+      console.error("코드 리뷰 조회/생성 오류:", error)
+      return NextResponse.json(
+        {
+          error: "AI 리뷰를 가져오는데 실패했습니다.",
+          details: error instanceof Error ? error.message : String(error),
+        },
+        { status: 500 }
+      )
+    }
+  }
+
+  // 제출 안 된 경우
+  return NextResponse.json({
+    improvements: [
+      "제출이 완료된 후 AI 리뷰를 확인할 수 있습니다.",
+    ],
+    altApproaches: [
+      "코드를 제출하면 더 자세한 피드백을 받을 수 있습니다.",
+    ],
+    finalSolution: {
+      language: body.language,
+      code: body.userCode,
+      notes: "제출 후 AI 리뷰를 받으세요.",
+    },
+  })
+}

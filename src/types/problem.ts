@@ -63,6 +63,7 @@ export interface JudgeRunResponse {
   status: "PENDING" | "AC" | "WA" | "TLE" | "RE" | "CE";
   results: SubmissionResultItem[];
   compileLog?: string;
+  submissionId?: number;
 }
 
 export interface HintOpenResponse {
