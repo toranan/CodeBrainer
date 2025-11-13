@@ -24,7 +24,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <QueryClientProvider client={queryClient}>
         {children}
-        <Toaster richColors duration={3000} position="top-right" />
+        <Toaster richColors duration={1000} position="top-right" />
         {process.env.NODE_ENV === "development" ? (
           <ReactQueryDevtools initialIsOpen={false} />
         ) : null}
