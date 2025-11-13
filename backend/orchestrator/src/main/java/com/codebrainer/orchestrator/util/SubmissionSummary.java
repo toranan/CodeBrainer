@@ -17,7 +17,11 @@ public record SubmissionSummary(
 
     public String toJson() {
         try {
+            // Determine overall verdict
+            String verdict = determineVerdict();
+
             return MAPPER.writeValueAsString(Map.of(
+                    "verdict", verdict,
                     "compile", Map.of(
                             "ok", compileOk,
                             "message", compileMessage != null ? compileMessage : ""
@@ -36,6 +40,30 @@ public record SubmissionSummary(
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("요약 정보를 직렬화할 수 없습니다.", e);
         }
+    }
+
+    private String determineVerdict() {
+        // If compilation failed, verdict is CE
+        if (!compileOk) {
+            return "CE";
+        }
+
+        // Check for errors in priority order
+        if (summary.getOrDefault("CE", 0) > 0) return "CE";
+        if (summary.getOrDefault("RE", 0) > 0) return "RE";
+        if (summary.getOrDefault("TLE", 0) > 0) return "TLE";
+        if (summary.getOrDefault("MLE", 0) > 0) return "MLE";
+        if (summary.getOrDefault("WA", 0) > 0) return "WA";
+
+        // If all tests passed, verdict is AC
+        int acCount = summary.getOrDefault("AC", 0);
+        int totalTests = summary.values().stream().mapToInt(Integer::intValue).sum();
+
+        if (acCount > 0 && acCount == totalTests) {
+            return "AC";
+        }
+
+        return "PENDING";
     }
 
     public String testsToJson(List<Map<String, Object>> tests) {

@@ -32,4 +32,11 @@ public class ProblemPublicController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @GetMapping("/id/{id}")
+    public ResponseEntity<ProblemDetailResponse> detailById(@PathVariable("id") Long id) {
+        return problemQueryService.fetchDetailById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
