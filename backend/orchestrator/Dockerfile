@@ -10,6 +10,10 @@ RUN mvn -f pom.xml package -DskipTests
 
 FROM eclipse-temurin:21-jre
 
+RUN apt update && \
+    apt install -y python3 python3-pip && \
+    apt clean
+
 WORKDIR /app
 
 COPY --from=build /app/target/orchestrator-0.0.1-SNAPSHOT.jar app.jar

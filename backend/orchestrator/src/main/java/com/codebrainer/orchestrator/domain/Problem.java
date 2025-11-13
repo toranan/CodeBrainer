@@ -7,45 +7,46 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.ArrayList;
 import lombok.*;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity
+@Table(name = "problems")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "problems")
+@Builder
 public class Problem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String title;
 
-    // @Column(nullable = false, unique = true, length = 128)
-    // private String slug;
+    private String slug;
 
-    // @Column(nullable = false)
-    // private String tier;
+    private String tier;
 
-    @Column(nullable = false)
     private Integer level;
 
-    @Column(name = "time_ms", nullable = false)
+    @Column(name = "time_ms")
     private Integer timeMs;
 
-    @Column(name = "mem_mb", nullable = false)
+    @Column(name = "mem_mb")
     private Integer memMb;
 
-    @Column(name = "algorithm", columnDefinition = "jsonb")
-    private List<String> algorithm = new ArrayList<>();
+    @Column(name = "statement_path")
+    private String statementPath;
 
-    @Column(name = "languages", columnDefinition = "jsonb")
-    private List<String> languages = new ArrayList<>();
+    @Column(columnDefinition = "jsonb")
+    private JsonNode categories;
 
-    @Column(name = "text_path")
-    private String textPath;
+    @Column(columnDefinition = "jsonb")
+    private JsonNode languages;
+
+    @Column(columnDefinition = "text")
+    private String constraints;
 
     @Column(name = "input_format", columnDefinition = "text")
     private String inputFormat;
@@ -53,18 +54,13 @@ public class Problem {
     @Column(name = "output_format", columnDefinition = "text")
     private String outputFormat;
 
-    @Builder
-    public Problem(Long id, String title, Integer level, Integer timeMs, Integer memMb, List<String> algorithm, List<String> languages, String textPath) {
-        this.id = id;
-        this.title = title;
-        this.level = level;
-        this.timeMs = timeMs;
-        this.memMb = memMb;
-        this.algorithm = algorithm;
-        this.languages = languages;
-        this.textPath = textPath;
-        this.inputFormat = "";
-        this.outputFormat = "";
-    }
-}
+    private String visibility;
 
+    private Integer version;
+
+    @Column(name = "created_at")
+    private String createdAt;
+
+    @Column(name = "updated_at")
+    private String updatedAt;
+}
