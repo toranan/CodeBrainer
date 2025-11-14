@@ -7,6 +7,12 @@ spring:
     username: ${DATABASE_USERNAME:postgres.sqwobsmtrgjuhgymfwtl}
     password: ${DATABASE_PASSWORD:qpwoe1234}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 3  # Supabase Free Plan 연결 제한 고려
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   
   jpa:
     hibernate:
