@@ -235,7 +235,10 @@ export async function fetchProblemFullByIdOrSlug(
   idOrSlug: string,
 ): Promise<{ detail: ProblemDetail; testcases: TestcaseData[] } | null> {
   try {
-    const detail = await orchestratorFetch<OrchestratorProblemDetail>(`/api/problems/${idOrSlug}`);
+    // Check if idOrSlug is a numeric ID
+    const isNumericId = /^\d+$/.test(idOrSlug);
+    const endpoint = isNumericId ? `/api/problems/id/${idOrSlug}` : `/api/problems/${idOrSlug}`;
+    const detail = await orchestratorFetch<OrchestratorProblemDetail>(endpoint);
     return mapOrchestratorDetailToProblem(detail);
   } catch (error) {
     console.warn("Orchestrator 문제 풀 호출 실패. Prisma/seed로 대체합니다.", error);
