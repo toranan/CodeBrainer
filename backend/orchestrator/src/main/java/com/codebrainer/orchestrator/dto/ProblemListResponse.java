@@ -15,4 +15,5 @@ public class ProblemListResponse {
     private String title;
     private String tier;
     private JsonNode categories;
+    private String statementPath;
 }

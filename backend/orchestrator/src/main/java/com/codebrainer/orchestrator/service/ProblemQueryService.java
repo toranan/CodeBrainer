@@ -1,14 +1,16 @@
 package com.codebrainer.orchestrator.service;
 
 import com.codebrainer.orchestrator.domain.Problem;
-import com.codebrainer.orchestrator.dto.ProblemDetailResponse;
+import com.codebrainer.orchestrator.dto.ProblemRequest;
+import com.codebrainer.orchestrator.dto.ProblemResponse;
 import com.codebrainer.orchestrator.dto.ProblemHintDto;
-import com.codebrainer.orchestrator.dto.ProblemSummaryResponse;
+import com.codebrainer.orchestrator.dto.ProblemListResponse;
 import com.codebrainer.orchestrator.dto.ProblemTestcaseResponse;
 import com.codebrainer.orchestrator.repository.ProblemHintRepository;
 import com.codebrainer.orchestrator.repository.ProblemRepository;
 import com.codebrainer.orchestrator.repository.ProblemTestRepository;
 import com.codebrainer.orchestrator.storage.StorageClient;
+import com.codebrainer.orchestrator.domain.ProblemTest;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -33,15 +35,15 @@ public class ProblemQueryService {
         this.storageClient = storageClient;
     }
 
-    public List<ProblemSummaryResponse> fetchSummaries() {
+    public List<ProblemListResponse> fetchSummaries() {
         return problemRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(this::toSummary)
                 .toList();
     }
 
-    public Optional<ProblemDetailResponse> fetchDetailBySlug(String slug) {
-        return problemRepository.findBySlug(slug)
+    public Optional<ProblemRequest> fetchDetailById(Long id) {
+        return problemRepository.findById(id)
                 .map(problem -> {
                     List<ProblemTestcaseResponse> allTestcases = problemTestRepository.findAllByProblemOrderByCaseNo(problem)
                             .stream()
@@ -62,43 +64,33 @@ public class ProblemQueryService {
                             ))
                             .toList();
 
-                    return new ProblemDetailResponse(
-                            problem.getId(),
-                            problem.getSlug(),
-                            problem.getTitle(),
-                            problem.getTier(),
-                            problem.getLevel(),
-                            readFileSafely(problem.getStatementPath()),
-                            problem.getConstraints(),
-                            problem.getInputFormat(),
-                            problem.getOutputFormat(),
-                            problem.getCategories(),
-                            problem.getLanguages(),
-                            hints,
-                            allTestcases,
-                            samples,
-                            problem.getCreatedAt(),
-                            problem.getUpdatedAt()
-                    );
+                    ProblemRequest dto = ProblemRequest.builder()
+                            .id(problem.getId())
+                            .title(problem.getTitle())
+                            .tier(problem.getTier())
+                            .timeMs(problem.getTimeMs())
+                            .memMb(problem.getMemMb())
+                            .categories(problem.getCategories())
+                            .inputFormat(problem.getInputFormat())
+                            .outputFormat(problem.getOutputFormat())
+                            .statementPath(problem.getStatementPath())
+                            .build();
+
+                    return dto;
                 });
     }
 
-    private ProblemSummaryResponse toSummary(Problem problem) {
-        return new ProblemSummaryResponse(
+    private ProblemListResponse toSummary(Problem problem) {
+        return new ProblemListResponse(
                 problem.getId(),
-                problem.getSlug(),
                 problem.getTitle(),
                 problem.getTier(),
-                problem.getLevel(),
                 problem.getCategories(),
-                problem.getLanguages(),
-                readFileSafely(problem.getStatementPath()),
-                problem.getCreatedAt(),
-                problem.getUpdatedAt()
+                readFileSafely(problem.getStatementPath())
         );
     }
 
-    private ProblemTestcaseResponse toTestcase(com.codebrainer.orchestrator.domain.ProblemTest test, boolean includeContent) {
+    private ProblemTestcaseResponse toTestcase(ProblemTest test, boolean includeContent) {
         return new ProblemTestcaseResponse(
                 test.getId(),
                 test.getCaseNo(),

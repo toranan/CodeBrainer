@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ProblemRepository extends JpaRepository<Problem, Long> {
 
-    Optional<Problem> findBySlug(String slug);
+    Optional<Problem> findById(Long id);
 
     List<Problem> findAllByOrderByCreatedAtDesc();
 }
