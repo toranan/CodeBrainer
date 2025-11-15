@@ -10,10 +10,15 @@ import com.codebrainer.orchestrator.repository.ProblemRepository;
 import com.codebrainer.orchestrator.repository.ProblemTestRepository;
 import com.codebrainer.orchestrator.storage.StorageClient;
 import jakarta.transaction.Transactional;
+
 import java.io.IOException;
-import java.time.OffsetDateTime;
 import java.util.List;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.stereotype.Service;
+
 
 @Service
 public class ProblemManagementService {
@@ -35,33 +40,49 @@ public class ProblemManagementService {
         this.storageClient = storageClient;
     }
 
+    private JsonNode toJsonNode(List<String> list) {
+        return mapper.valueToTree(list == null ? List.of() : list);
+    }
+
+    private JsonNode fixedLanguages() {
+        List<String> langs = List.of(
+                "C++17", "Python3", "PyPy3", "C99", "Java11",
+                "Ruby", "Kotlin(JVM)", "Swift", "Text", "C#",
+                "node.js", "GO", "D", "Rust2018", "C++17(Clang)"
+        );
+        return mapper.valueToTree(langs);
+    }
+
+
     @Transactional
     public Problem createProblem(Problem problem, String statementContent, List<String> categories, List<String> languages, String constraints) throws IOException {
         if (problem.getCreatedAt() == null) {
             problem.setCreatedAt(OffsetDateTime.now());
         }
-        problem.setUpdatedAt(OffsetDateTime.now());
+        problem.setUpdatedAt(null);
         problem.setCategories(categories == null ? List.of() : categories);
-        problem.setLanguages(languages == null ? List.of() : languages);
-        problem.setConstraints(constraints);
+        problem.setLanguages(fixedLanguages());
+        problem.setConstraints(null);
 
-        // slug를 사용하여 경로를 미리 생성
-        String statementPath = buildStatementPathBySlug(problem.getSlug());
+        Problem saved = problemRepository.save(problem);
+
+        String statementPath = buildStatementPathById(saved.getId());
         storageClient.saveString(statementPath, statementContent);
-        problem.setStatementPath(statementPath);
+        saved.setStatementPath(statementPath);
 
-        return problemRepository.save(problem);
+        return problemRepository.save(saved);
     }
 
     @Transactional
     public void addTestcases(Problem problem, List<ProblemTestDto> tests) throws IOException {
         if (tests == null) return;
+        Long problemId = problem.getId();
         for (ProblemTestDto dto : tests) {
             ProblemTest test = new ProblemTest();
             test.setProblem(problem);
             test.setCaseNo(dto.caseNo());
-            String inputPath = buildTestcaseInputPathBySlug(problem.getSlug(), dto.caseNo());
-            String outputPath = buildTestcaseOutputPathBySlug(problem.getSlug(), dto.caseNo());
+            String inputPath = buildTestcaseInputPathById(problemId, dto.caseNo());
+            String outputPath = buildTestcaseOutputPathById(problemId, dto.caseNo());
             storageClient.saveString(inputPath, dto.input());
             storageClient.saveString(outputPath, dto.output());
             test.setInputPath(inputPath);
@@ -78,13 +99,13 @@ public class ProblemManagementService {
         for (ProblemHintDto hintDto : hints) {
             ProblemHint hint = new ProblemHint();
             hint.setProblem(problem);
-            hint.setTier(problem.getTier());
-            hint.setStage(hintDto.stage());
-            hint.setTitle(hintDto.title());
+            hint.setTier(null);
+            hint.setStage(dto.stage());
+            hint.setTitle(null);
             hint.setContentMarkdown(hintDto.contentMd());
             hint.setWaitSeconds(hintDto.waitSeconds());
             hint.setCreatedAt(OffsetDateTime.now());
-            hint.setUpdatedAt(OffsetDateTime.now());
+            hint.setUpdatedAt(null);
             problemHintRepository.save(hint);
         }
     }
@@ -93,24 +114,11 @@ public class ProblemManagementService {
         return "problems/" + problemId + "/statement.md";
     }
 
-    private String buildStatementPathBySlug(String slug) {
-        return "problems/" + slug + "/statement.md";
-    }
-
     private String buildTestcaseInputPath(Long problemId, Integer caseNo) {
         return "problems/" + problemId + "/tests/" + caseNo + ".in";
     }
-
-    private String buildTestcaseInputPathBySlug(String slug, Integer caseNo) {
-        return "problems/" + slug + "/tests/" + caseNo + ".in";
-    }
-
     private String buildTestcaseOutputPath(Long problemId, Integer caseNo) {
         return "problems/" + problemId + "/tests/" + caseNo + ".out";
-    }
-
-    private String buildTestcaseOutputPathBySlug(String slug, Integer caseNo) {
-        return "problems/" + slug + "/tests/" + caseNo + ".out";
     }
 }
 

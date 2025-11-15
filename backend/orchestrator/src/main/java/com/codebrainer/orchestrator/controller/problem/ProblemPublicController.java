@@ -1,15 +1,13 @@
 package com.codebrainer.orchestrator.controller.problem;
 
-import com.codebrainer.orchestrator.dto.ProblemDetailResponse;
-import com.codebrainer.orchestrator.dto.ProblemSummaryResponse;
+import com.codebrainer.orchestrator.dto.ProblemRequest;
+import com.codebrainer.orchestrator.dto.ProblemListResponse;
 import com.codebrainer.orchestrator.service.ProblemQueryService;
-import java.io.IOException;
+
 import java.util.List;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/problems")
@@ -22,13 +20,13 @@ public class ProblemPublicController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProblemSummaryResponse>> list() {
+    public ResponseEntity<List<ProblemListResponse>> list() {
         return ResponseEntity.ok(problemQueryService.fetchSummaries());
     }
 
-    @GetMapping("/{slug}")
-    public ResponseEntity<ProblemDetailResponse> detail(@PathVariable("slug") String slug) {
-        return problemQueryService.fetchDetailBySlug(slug)
+    @GetMapping("/{id}")
+    public ResponseEntity<ProblemResponse> detail(@PathVariable("id") Long id) {
+        return problemQueryService.fetchDetailById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

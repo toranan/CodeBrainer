@@ -11,7 +11,7 @@ import com.codebrainer.orchestrator.domain.Problem;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProblemRequest {
+public class ProblemResponse {
     private Long id;
     private String title;
     private String tier;
