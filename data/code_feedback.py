@@ -18,7 +18,7 @@ def fetch_questions():
 
 def generate_text():
     system_message = "한글로 대답해"
-    user_message = "hi your bald."
+    user_message = ""
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_message),
