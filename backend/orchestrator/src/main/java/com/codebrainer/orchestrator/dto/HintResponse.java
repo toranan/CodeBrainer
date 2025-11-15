@@ -10,12 +10,9 @@ import com.codebrainer.orchestrator.domain.Hint;
 @Getter
 @Setter
 public class HintResponse {
+    private Long id;
     private Long problemId;
-    private List<String> hints = new ArrayList<>();
-
-    public HintResponse(Hint hint) {
-        this.problemId = hint.getId();
-        this.hints = hint.getHints() != null ? hint.getHints() : new ArrayList<>();
-    }
+    private Short stage;
+    private String contents;
 }
 
