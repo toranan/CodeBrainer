@@ -23,33 +23,54 @@ interface CodeReviewResponse {
 function parseReviewContent(reviewContent: string, code: string, language: string) {
   const improvements: string[] = []
   const altApproaches: string[] = []
+  let modelCode = code
+  let notes = reviewContent
 
-  // 개선사항 섹션 추출
-  const improvementsMatch = reviewContent.match(/개선.*?[:：]([\s\S]*?)(?=\n\n|\d\.|\z)/i)
+  // 1. 개선 포인트 추출 (### 개선 포인트: 섹션)
+  const improvementsMatch = reviewContent.match(/###\s*개선\s*포인트\s*[:：]?\s*([\s\S]*?)(?=###|$)/i)
   if (improvementsMatch) {
     const lines = improvementsMatch[1].trim().split('\n').filter(line => line.trim())
     lines.forEach(line => {
       const cleaned = line.replace(/^[-•*\d.)\s]+/, '').trim()
-      if (cleaned) improvements.push(cleaned)
+      if (cleaned && !cleaned.startsWith('#')) improvements.push(cleaned)
     })
   }
 
-  // 대안적 접근 섹션 추출
-  const altMatch = reviewContent.match(/(?:대안|다른 방법|alternative).*?[:：]([\s\S]*?)(?=\n\n|\d\.|\z)/i)
+  // 2. 다른 접근법 추출 (### 다른 접근법: 섹션)
+  const altMatch = reviewContent.match(/###\s*다른\s*접근법\s*[:：]?\s*([\s\S]*?)(?=###|$)/i)
   if (altMatch) {
     const lines = altMatch[1].trim().split('\n').filter(line => line.trim())
     lines.forEach(line => {
       const cleaned = line.replace(/^[-•*\d.)\s]+/, '').trim()
-      if (cleaned) altApproaches.push(cleaned)
+      if (cleaned && !cleaned.startsWith('#')) altApproaches.push(cleaned)
     })
   }
 
+  // 3. 모범답안 코드 추출 (### 모범답안 코드: 섹션의 코드 블록)
+  const codeMatch = reviewContent.match(/###\s*모범답안\s*코드\s*[:：]?\s*```[\w]*\s*([\s\S]*?)```/i)
+  if (codeMatch && codeMatch[1].trim()) {
+    modelCode = codeMatch[1].trim()
+  }
+
+  // 4. 출제의도 부합 여부 및 상세 설명 추출
+  const intentMatch = reviewContent.match(/###\s*출제의도\s*부합\s*여부\s*([\s\S]*?)(?=###|$)/i)
+  const detailMatch = reviewContent.match(/###\s*상세\s*설명\s*[:：]?\s*([\s\S]*?)$/i)
+
+  let fullNotes = ''
+  if (intentMatch) {
+    fullNotes += '## 출제의도 부합 여부\n' + intentMatch[1].trim() + '\n\n'
+  }
+  if (detailMatch) {
+    fullNotes += '## 상세 분석\n' + detailMatch[1].trim()
+  }
+  notes = fullNotes || reviewContent
+
   // 기본값 제공
   if (improvements.length === 0) {
-    improvements.push("AI가 코드를 분석했습니다.")
+    improvements.push("코드가 문제를 올바르게 해결했습니다.")
   }
   if (altApproaches.length === 0) {
-    altApproaches.push("전체 리뷰 내용을 참고해주세요.")
+    altApproaches.push("현재 접근 방식이 적절합니다.")
   }
 
   return {
@@ -57,8 +78,8 @@ function parseReviewContent(reviewContent: string, code: string, language: strin
     altApproaches,
     finalSolution: {
       language,
-      code,
-      notes: reviewContent,
+      code: modelCode,
+      notes,
     },
   }
 }

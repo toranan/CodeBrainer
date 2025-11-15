@@ -30,7 +30,7 @@ storage:
   base-path: ./storage
 
 judge0:
-  api-url: http://3.27.95.194:2358
+  api-url: http://54.252.182.149:2358
   callback-url: http://localhost:8080/internal/judge0/callback
   callback-enabled: false
 

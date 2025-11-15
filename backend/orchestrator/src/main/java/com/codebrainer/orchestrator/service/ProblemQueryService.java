@@ -42,42 +42,56 @@ public class ProblemQueryService {
                 .toList();
     }
 
-    public Optional<ProblemRequest> fetchDetailById(Long id) {
+
+    // public Optional<ProblemDetailResponse> fetchDetailBySlug(String slug) {
+    //     return problemRepository.findBySlug(slug)
+    //             .map(this::buildDetailResponse);
+    // }
+
+    public Optional<ProblemDetailResponse> fetchDetailById(Long id) {
         return problemRepository.findById(id)
-                .map(problem -> {
-                    List<ProblemTestcaseResponse> allTestcases = problemTestRepository.findAllByProblemOrderByCaseNo(problem)
-                            .stream()
-                            .map(test -> toTestcase(test, true))
-                            .toList();
+                .map(this::buildDetailResponse);
+    }
 
-                    List<ProblemTestcaseResponse> samples = allTestcases.stream()
-                            .filter(tc -> Boolean.FALSE.equals(tc.hidden()))
-                            .toList();
+    private ProblemDetailResponse buildDetailResponse(Problem problem) {
+        List<ProblemTestcaseResponse> allTestcases = problemTestRepository.findAllByProblemOrderByCaseNo(problem)
+                .stream()
+                .map(test -> toTestcase(test, true))
+                .toList();
 
-                    List<ProblemHintDto> hints = problemHintRepository.findAllByProblemOrderByStageAsc(problem)
-                            .stream()
-                            .map(hint -> new ProblemHintDto(
-                                    hint.getStage(),
-                                    hint.getTitle(),
-                                    hint.getContentMarkdown(),
-                                    hint.getWaitSeconds()
-                            ))
-                            .toList();
 
-                    ProblemRequest dto = ProblemRequest.builder()
-                            .id(problem.getId())
-                            .title(problem.getTitle())
-                            .tier(problem.getTier())
-                            .timeMs(problem.getTimeMs())
-                            .memMb(problem.getMemMb())
-                            .categories(problem.getCategories())
-                            .inputFormat(problem.getInputFormat())
-                            .outputFormat(problem.getOutputFormat())
-                            .statementPath(problem.getStatementPath())
-                            .build();
+        List<ProblemTestcaseResponse> samples = allTestcases.stream()
+                .filter(tc -> Boolean.FALSE.equals(tc.hidden()))
+                .toList();
 
-                    return dto;
-                });
+        List<ProblemHintDto> hints = problemHintRepository.findAllByProblemOrderByStageAsc(problem)
+                .stream()
+                .map(hint -> new ProblemHintDto(
+                        hint.getStage(),
+                        hint.getTitle(),
+                        hint.getContentMarkdown(),
+                        hint.getWaitSeconds()
+                ))
+                .toList();
+
+        return new ProblemDetailResponse(
+                problem.getId(),
+                problem.getSlug(),
+                problem.getTitle(),
+                problem.getTier(),
+                problem.getLevel(),
+                readFileSafely(problem.getStatementPath()),
+                problem.getConstraints(),
+                problem.getInputFormat(),
+                problem.getOutputFormat(),
+                problem.getCategories(),
+                problem.getLanguages(),
+                hints,
+                allTestcases,
+                samples,
+                problem.getCreatedAt(),
+                problem.getUpdatedAt()
+        );
     }
 
     private ProblemListResponse toSummary(Problem problem) {

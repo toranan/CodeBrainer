@@ -91,23 +91,60 @@ public class GeminiAIService {
      */
     private String buildReviewPrompt(String code, String problemTitle, String problemStatement, String languageId) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("당신은 전문 코드 리뷰어입니다. 다음 알고리즘 문제에 대한 제출 코드를 리뷰해주세요.\n\n");
-        prompt.append("문제: ").append(problemTitle).append("\n");
+        prompt.append("당신은 알고리즘 전문 코드 리뷰어입니다. 다음 문제에 대한 제출 코드를 평가해주세요.\n\n");
+        prompt.append("# 문제: ").append(problemTitle).append("\n\n");
 
         if (problemStatement != null && !problemStatement.isEmpty()) {
-            prompt.append("문제 설명:\n").append(problemStatement).append("\n\n");
+            prompt.append("# 문제 설명 및 출제 의도:\n").append(problemStatement).append("\n\n");
         }
 
-        prompt.append("프로그래밍 언어: ").append(languageId).append("\n\n");
-        prompt.append("제출된 코드:\n```").append(languageId).append("\n");
+        prompt.append("# 프로그래밍 언어: ").append(languageId).append("\n\n");
+        prompt.append("# 제출된 코드:\n```").append(languageId).append("\n");
         prompt.append(code).append("\n```\n\n");
-        prompt.append("다음 관점에서 코드를 리뷰해주세요:\n");
-        prompt.append("1. 코드가 문제의 요구사항을 올바르게 해결했는지\n");
-        prompt.append("2. 알고리즘의 시간 복잡도와 공간 복잡도\n");
-        prompt.append("3. 코드의 가독성과 구조\n");
-        prompt.append("4. 개선할 수 있는 부분이나 더 효율적인 접근 방법\n");
-        prompt.append("5. 1-5점 사이의 코드 품질 점수 (5점 만점)\n\n");
-        prompt.append("리뷰는 한국어로 작성하고, 건설적이고 교육적인 톤으로 작성해주세요.");
+
+        prompt.append("# 리뷰 작성 규칙:\n\n");
+
+        prompt.append("## 1. 출제의도 부합 여부 (필수)\n");
+        prompt.append("제출 코드가 **출제의도에 부합**하는지 먼저 평가하세요:\n");
+        prompt.append("- 문제 설명에 명시된 알고리즘 카테고리(예: 완전탐색, DP, 그리디 등)에 맞는 접근 방식을 사용했는지 확인\n");
+        prompt.append("- 출제의도에 부합하면: \"✅ 출제의도에 부합합니다.\" 라고 명시\n");
+        prompt.append("- 부합하지 않으면: \"⚠️ 출제의도와 다른 접근을 사용했습니다.\" 라고 명시하고 이유 설명\n\n");
+
+        prompt.append("## 2. 개선 포인트\n");
+        prompt.append("코드에서 개선할 수 있는 부분을 구체적으로 나열하세요. 각 항목은 한 문장으로 작성하세요.\n");
+        prompt.append("- 출제의도에 부합하는 경우: 코드 품질, 가독성, 효율성 측면의 개선점 제시\n");
+        prompt.append("- 출제의도와 다른 경우: 올바른 접근 방법과 현재 코드의 차이점 설명\n\n");
+
+        prompt.append("## 3. 다른 접근법\n");
+        prompt.append("문제를 해결할 수 있는 대안적인 접근 방법을 제시하세요. 각 항목은 한 문장으로 작성하세요.\n\n");
+
+        prompt.append("## 4. 모범답안 코드\n");
+        prompt.append("출제의도에 맞는 완전한 코드를 작성하세요:\n");
+        prompt.append("- 출제의도에 부합하는 경우: 제출 코드를 약간 개선한 버전\n");
+        prompt.append("- 출제의도와 다른 경우: 출제의도에 맞는 올바른 접근의 완전한 코드\n");
+        prompt.append("- 코드에는 핵심 로직을 설명하는 주석 포함\n\n");
+
+        prompt.append("## 5. 코드 품질 점수\n");
+        prompt.append("1-5점 사이의 점수를 \"점수: X/5\" 형식으로 명시하세요.\n\n");
+
+        prompt.append("---\n\n");
+        prompt.append("응답 형식: 반드시 아래 형식을 정확히 따라 작성하세요.\n\n");
+        prompt.append("### 출제의도 부합 여부\n");
+        prompt.append("(✅ 또는 ⚠️ 로 시작하는 평가)\n\n");
+        prompt.append("### 개선 포인트:\n");
+        prompt.append("- 개선점 1\n");
+        prompt.append("- 개선점 2\n");
+        prompt.append("- 개선점 3\n\n");
+        prompt.append("### 다른 접근법:\n");
+        prompt.append("- 접근법 1\n");
+        prompt.append("- 접근법 2\n\n");
+        prompt.append("### 모범답안 코드:\n");
+        prompt.append("```").append(languageId).append("\n");
+        prompt.append("// 모범답안 코드\n");
+        prompt.append("```\n\n");
+        prompt.append("### 점수: X/5\n\n");
+        prompt.append("### 상세 설명:\n");
+        prompt.append("(시간/공간 복잡도, 에지 케이스 처리 등 추가 분석)\n");
 
         return prompt.toString();
     }
