@@ -2,9 +2,16 @@ spring:
   application:
     name: codebrainer-orchestrator
   datasource:
-    url: jdbc:postgresql://localhost:5432/codebrainer
-    username: codebrainer
-    password: codebrainer
+    url: ${DATABASE_URL:jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true&prepareThreshold=0}
+    username: ${DATABASE_USERNAME:postgres.sqwobsmtrgjuhgymfwtl}
+    password: ${DATABASE_PASSWORD:qpwoe1234}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 300000
+      max-lifetime: 900000
   jpa:
     open-in-view: false
     hibernate:
@@ -12,11 +19,15 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   rabbitmq:
     host: localhost
     port: 5672
     username: guest
     password: guest
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
   flyway:
     enabled: false
 
