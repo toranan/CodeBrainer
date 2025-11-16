@@ -1,0 +1,21 @@
+# 크롤링 결과 파일
+*.json
+crawled_problems.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+
+# Selenium
+*.log
+
