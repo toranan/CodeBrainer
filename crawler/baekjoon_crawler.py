@@ -83,11 +83,11 @@ def crawl_baekjoon_problem(problem_id):
             'source_url': url
         }
         
-        print(f"✅ 문제 {problem_id} 크롤링 완료: {title_text}")
+        print(f"[OK] 문제 {problem_id} 크롤링 완료: {title_text}")
         return problem_data
         
     except Exception as e:
-        print(f"❌ 문제 {problem_id} 크롤링 실패: {e}")
+        print(f"[ERROR] 문제 {problem_id} 크롤링 실패: {e}")
         return None
 
 
@@ -123,7 +123,7 @@ def save_to_json(problems, filename='problems.json'):
     """JSON 파일로 저장"""
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(problems, f, ensure_ascii=False, indent=2)
-    print(f"✅ {filename}에 저장 완료!")
+    print(f"[OK] {filename}에 저장 완료!")
 
 
 if __name__ == "__main__":
@@ -142,15 +142,14 @@ if __name__ == "__main__":
     print("=" * 50)
     
     # 크롤링 실행 (서버 부담을 줄이기 위해 3초 대기)
-    problems1 = crawl_multiple_problems(problem_ids1, delay=3)
+    # problems1 = crawl_multiple_problems(problem_ids1, delay=3)  # Hashing - 이미 완료
     problems2 = crawl_multiple_problems(problem_ids2, delay=3)
     problems3 = crawl_multiple_problems(problem_ids3, delay=3)
     # JSON 저장
-    save_to_json(problems1, 'crawled_problems_hashing.json')
+    # save_to_json(problems1, 'crawled_problems_hashing.json')  # Hashing - 이미 완료
     save_to_json(problems2, 'crawled_problems_stack.json') 
     save_to_json(problems3, 'crawled_problems_heap.json')
     
-    print(f"\n총 {len(problems1)}개 Hashing 문제 크롤링 완료!")
-    print(f"총 {len(problems2)}개 Stack 문제 크롤링 완료!")
+    print(f"\n총 {len(problems2)}개 Stack 문제 크롤링 완료!")
     print(f"총 {len(problems3)}개 Heap 문제 크롤링 완료!")
 

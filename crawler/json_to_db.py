@@ -9,20 +9,8 @@ from pathlib import Path
 
 def create_slug(title, problem_id):
     """문제 제목을 slug로 변환"""
-    # 한글/영문 제목을 영문 소문자로 변환
-    slug = re.sub(r'[^a-zA-Z0-9가-힣\s-]', '', title)
-    slug = slug.lower().strip()
-    slug = re.sub(r'[\s]+', '-', slug)
-    
-    # 너무 길면 자르기
-    if len(slug) > 50:
-        slug = slug[:50]
-    
-    # 한글이 포함되어 있으면 문제 번호를 앞에 추가
-    if re.search(r'[가-힣]', slug):
-        slug = f"problem-{problem_id}"
-    
-    return slug
+    # 모든 문제를 problem-{id} 형태로 통일
+    return f"problem-{problem_id}"
 
 def create_markdown_content(problem):
     """JSON 데이터를 Markdown 형식으로 변환"""
@@ -125,12 +113,14 @@ def process_json_file(json_file, category, storage_base_path):
         mem_mb = parse_memory_limit(problem['memory_limit'])
         statement_path = f"problems/{slug}/statement.md"
         
-        sql = f"""INSERT INTO problems (
-    title, tier, level, time_ms, mem_mb, 
+        # Problem INSERT 문
+        problem_sql = f"""INSERT INTO problems (
+    title, slug, tier, level, time_ms, mem_mb, 
     statement_path, visibility, version, 
     created_at, updated_at
 ) VALUES (
     '{problem['title'].replace("'", "''")}',
+    '{slug}',
     '{tier}',
     {level},
     {time_ms},
@@ -142,7 +132,41 @@ def process_json_file(json_file, category, storage_base_path):
     NOW()
 );"""
         
-        sql_statements.append(sql)
+        sql_statements.append(problem_sql)
+        
+        # Problem Tests 파일 및 INSERT 문 생성
+        for sample in problem['samples']:
+            case_no = sample['case_no']
+            
+            # 테스트케이스 입출력 파일 생성
+            input_file = problem_dir / f"{case_no}.in"
+            output_file = problem_dir / f"{case_no}.out"
+            
+            with open(input_file, 'w', encoding='utf-8') as f:
+                f.write(sample['input'].replace('\r\n', '\n'))
+            
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(sample['output'].replace('\r\n', '\n'))
+            
+            created_files.append(str(input_file))
+            created_files.append(str(output_file))
+            
+            # in_path, out_path 설정
+            in_path = f"problems/{slug}/{case_no}.in"
+            out_path = f"problems/{slug}/{case_no}.out"
+            is_hidden = str(sample.get('hidden', False)).upper()
+            
+            test_sql = f"""INSERT INTO problem_tests (
+    problem_id, case_no, in_path, out_path, is_hidden
+)
+SELECT id, {case_no}, 
+    '{in_path}',
+    '{out_path}',
+    {is_hidden}
+FROM problems
+WHERE slug = '{slug}';"""
+            
+            sql_statements.append(test_sql)
     
     return sql_statements, created_files
 
