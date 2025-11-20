@@ -1,83 +1,75 @@
 package com.codebrainer.orchestrator.service;
 
-import lombok.*;
+import org.springframework.stereotype.Service;
+import jakarta.transaction.Transactional;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.OffsetDateTime;
+import java.util.List;
+
+import lombok.RequiredArgsConstructor;
+
+import com.codebrainer.orchestrator.repository.ProblemRepository;
+import com.codebrainer.orchestrator.repository.ProblemHintRepository;
+import com.codebrainer.orchestrator.domain.Problem;
+import com.codebrainer.orchestrator.domain.ProblemHint;
 
 @Service
 @RequiredArgsConstructor
 public class HintService {
 
+    private final ProblemRepository problemRepository;
     private final ProblemHintRepository problemHintRepository;
 
-    /**
-     * stage를 자동 증가(1~4)
-     */
     @Transactional
     public ProblemHint addNextStageHint(Long problemId, String markdown) throws IOException {
 
-        // 현재 저장된 힌트 불러오기
-        List<ProblemHint> existing = problemHintRepository
-                .findAllByProblemIdOrderByStageAsc(problemId);
+        List<ProblemHint> existing =
+                problemHintRepository.findAllByProblemIdOrderByStageAsc(problemId);
 
         int nextStage = existing.size() + 1;
-        if (nextStage > 4) {
-            throw new IllegalStateException("힌트는 최대 4개만 저장할 수 있습니다.");
+
+        Problem problem = problemRepository.findById(problemId)
+                .orElseThrow(() -> new IllegalArgumentException("문제 없음 id=" + problemId));
+
+        int maxStage = Integer.parseInt(problem.getTier());
+
+        if (nextStage > maxStage) {
+            throw new IllegalStateException(
+                    "힌트는 최대 " + maxStage + "개(tier)만 저장할 수 있습니다."
+            );
         }
 
-        // 엔티티 생성
         ProblemHint hint = ProblemHint.builder()
                 .problemId(problemId)
                 .stage((short) nextStage)
-                .title(null)              // 의도대로 null 처리
-                .waitSeconds(0)
+                .title(null)
+                .lang(null)
+                .version(null)
+                .source(null)
+                .reviewerId(null)
+                .waitSeconds(5)
                 .isActive(true)
-                .createdAt(OffsetDateTime.now())
+                .createdAt(null)
+                .updatedAt(null)
                 .build();
 
-        // 1차 저장 → id 생성
         problemHintRepository.save(hint);
 
-        // 파일 저장
         String basePath = System.getenv("STORAGE_BASE_PATH");
-        Path file = Path.of(basePath,
-                "problems",
+        Path file = Path.of(
+                basePath, "problems",
                 problemId.toString(),
                 "hints",
-                hint.getId() + ".md");
+                hint.getId() + ".md"
+        );
 
         Files.createDirectories(file.getParent());
         Files.writeString(file, markdown);
 
-        // 파일 경로 DB 저장
         hint.setContentPath(file.toString());
-        hint.setUpdatedAt(OffsetDateTime.now());
 
         return problemHintRepository.save(hint);
     }
-
-    /**
-     * 파이썬 스크립트 실행
-     */
-    public void runHintScript(Long problemId) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-                "python", "data/make_hints.py", problemId.toString()
-        );
-        pb.redirectErrorStream(true);
-        pb.directory(new File("."));
-
-        Process process = pb.start();
-        int exit = process.waitFor();
-
-        if (exit != 0) {
-            throw new IllegalStateException("make_hints.py 실행 실패: exit=" + exit);
-        }
-    }
-}
-
-@Transactional
-public Problem toEntity(ProblemRequest req) {
-    return Problem.builder()
-            .id(req.getId())
-            .title(null)   // 의도대로 null 처리
-            .tier(req.getTier())
-            .build();
 }

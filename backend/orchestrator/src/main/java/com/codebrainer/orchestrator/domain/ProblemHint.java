@@ -5,7 +5,12 @@ import java.time.OffsetDateTime;
 import lombok.*;
 import java.util.List;
 import java.util.ArrayList;
-
+import lombok.*;
+import com.codebrainer.orchestrator.dto.HintRequest;
+import com.codebrainer.orchestrator.service.HintService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.io.IOException;
 import com.codebrainer.orchestrator.domain.Problem;
 import java.time.OffsetDateTime;
 

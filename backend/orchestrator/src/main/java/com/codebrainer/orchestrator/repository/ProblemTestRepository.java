@@ -6,11 +6,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ProblemTestRepository extends JpaRepository<ProblemTest, Long> {
-
-    List<ProblemTest> findAllByProblemOrderByCaseNo(Problem problem);
-
     List<ProblemTest> findAllByProblemIdOrderByCaseNo(Long problemId);
-
-    void deleteByProblem(Problem problem);
+    void deleteByProblemId(Long problemId);
 }
 

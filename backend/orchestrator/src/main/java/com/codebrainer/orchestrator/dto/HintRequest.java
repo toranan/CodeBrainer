@@ -6,7 +6,6 @@ import lombok.*;
 @AllArgsConstructor
 @Getter
 @Setter
-public class ProblemRequest {
-    private Long id;
-    private String title;
+public class HintRequest {
+    private String content;
 }

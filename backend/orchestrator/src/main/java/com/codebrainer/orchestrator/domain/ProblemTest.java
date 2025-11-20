@@ -6,42 +6,42 @@ import lombok.*;
 @Entity
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "testcases")
-public class Testcase {
+@Table(name = "problem_tests")
+public class ProblemTest {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "problem_id", nullable = false)
-    private Problem problem;
+    @Column(name = "problem_id", nullable = false)
+    private Long problemId;
 
     // id랑 동일 역할
-    // @Column(name = "case_no", nullable = false)
-    // private Integer caseNo;
+    @Column(name = "case_no", nullable = false)
+    private Integer caseNo;
 
-    @Column(name = "in", nullable = false)
-    private String in;
+    @Column(name = "in_path", nullable = false)
+    private String inputPath;
 
-    @Column(name = "out", nullable = false)
-    private String out;
+    @Column(name = "out_path", nullable = false)
+    private String outputPath;
 
     @Column(name = "is_hidden", nullable = false)
-    private Boolean hidden;
+    private Boolean isHidden;
 
     @Column(name = "explanation", columnDefinition = "text")
     private String explanation;
 
     @Builder
-    public Testcase(Problem problem, Integer caseNo, String inputPath, String outputPath) {
-        this.problem = problem;
+    public ProblemTest(Long problemId, Integer caseNo, String inputPath, String outputPath) {
+        this.problemId = problemId;
         this.caseNo = caseNo;
         this.inputPath = inputPath;
         this.outputPath = outputPath;
-        this.is_hidden = false;
+        this.isHidden = false;
         this.explanation = "";
     }
 }
