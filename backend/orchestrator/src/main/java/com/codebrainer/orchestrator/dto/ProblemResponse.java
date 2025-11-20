@@ -1,11 +1,9 @@
 package com.codebrainer.orchestrator.dto;
 
-import java.time.OffsetDateTime;
+import lombok.*;
 import java.util.List;
 import java.util.ArrayList;
-import lombok.*;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.codebrainer.orchestrator.domain.Problem;
+import java.time.OffsetDateTime;
 
 @Getter
 @Setter
@@ -18,14 +16,17 @@ public class ProblemResponse {
     private String tier;
     private Integer timeMs;
     private Integer memMb;
-    private JsonNode languages;
-    private JsonNode categories;
+    private List<String> languages;
+    private List<String> categories;
     private String constraints;
     private String inputFormat;
     private String outputFormat;
     private String statementPath;
-    private String visibility;
+    private Boolean visibility;
     private Integer version;
-    private String createdAt;
-    private String updatedAt;
+    private List<ProblemHintDto> hints;
+    private List<ProblemTestcaseResponse> testcases;
+    private List<ProblemTestcaseResponse> samples;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
 }

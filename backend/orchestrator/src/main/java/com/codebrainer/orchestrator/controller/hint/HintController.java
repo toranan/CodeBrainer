@@ -1,6 +1,11 @@
 package com.codebrainer.orchestrator.controller.hint;
 
 import lombok.*;
+import com.codebrainer.orchestrator.dto.HintRequest;
+import com.codebrainer.orchestrator.service.HintService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/hint")
@@ -12,9 +17,9 @@ public class HintController {
     @PostMapping("/{problemId}")
     public ResponseEntity<?> addHint(
             @PathVariable Long problemId,
-            @RequestBody HintCreateRequest req
+            @RequestBody HintRequest req
     ) throws IOException {
-        String markdown = req.getHint();
+        String markdown = req.getContent();
 
         hintService.addNextStageHint(problemId, markdown);
 

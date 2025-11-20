@@ -9,7 +9,6 @@ import com.codebrainer.orchestrator.domain.Problem;
 @AllArgsConstructor
 @Getter
 @Setter
-public class TestcaseRequest {
-    @NotBlank(message = "problem은 필수입니다")
-    private Problem problem;
+public class ProblemTestcaseRequest {
+    private Long problemId;
 }

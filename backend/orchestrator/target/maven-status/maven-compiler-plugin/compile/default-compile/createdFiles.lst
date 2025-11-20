@@ -29,14 +29,14 @@ com\codebrainer\orchestrator\queue\SubmissionPublisher.class
 com\codebrainer\orchestrator\service\ProblemQueryService.class
 com\codebrainer\orchestrator\util\DiffUtil.class
 com\codebrainer\orchestrator\domain\ProblemTest.class
-com\codebrainer\orchestrator\dto\ProblemDetailResponse.class
+com\codebrainer\orchestrator\dto\ProblemResponse.class
 com\codebrainer\orchestrator\judge0\Judge0Status.class
 com\codebrainer\orchestrator\repository\ProblemRepository.class
 com\codebrainer\orchestrator\service\ProblemManagementService.class
 com\codebrainer\orchestrator\config\SecurityConfig.class
 com\codebrainer\orchestrator\controller\problem\ProblemPublicController.class
 com\codebrainer\orchestrator\domain\SubmissionResult.class
-com\codebrainer\orchestrator\dto\ProblemUpsertRequest.class
+com\codebrainer\orchestrator\dto\ProblemRequest.class
 com\codebrainer\orchestrator\repository\SubmissionRepository.class
 com\codebrainer\orchestrator\domain\Submission.class
 com\codebrainer\orchestrator\repository\ProblemHintRepository.class

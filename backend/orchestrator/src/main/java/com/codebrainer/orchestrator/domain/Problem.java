@@ -7,7 +7,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.ArrayList;
 import lombok.*;
-import com.fasterxml.jackson.databind.JsonNode;
 
 @Entity
 @Table(name = "problems")
@@ -40,10 +39,10 @@ public class Problem {
     private String statementPath;
 
     @Column(columnDefinition = "jsonb")
-    private JsonNode categories;
+    private List<String> categories;
 
     @Column(columnDefinition = "jsonb")
-    private JsonNode languages;
+    private List<String> languages;
 
     @Column(columnDefinition = "text")
     private String constraints;
@@ -54,13 +53,13 @@ public class Problem {
     @Column(name = "output_format", columnDefinition = "text")
     private String outputFormat;
 
-    private String visibility;
+    private Boolean visibility;
 
     private Integer version;
 
     @Column(name = "created_at")
-    private String createdAt;
+    private OffsetDateTime createdAt;
 
     @Column(name = "updated_at")
-    private String updatedAt;
+    private OffsetDateTime updatedAt;
 }

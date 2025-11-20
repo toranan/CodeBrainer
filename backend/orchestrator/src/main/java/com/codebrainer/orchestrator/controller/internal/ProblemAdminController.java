@@ -1,12 +1,16 @@
 package com.codebrainer.orchestrator.controller.internal;
 
 import com.codebrainer.orchestrator.domain.Problem;
-import com.codebrainer.orchestrator.dto.ProblemUpsertRequest;
+import com.codebrainer.orchestrator.dto.ProblemRequest;
 import com.codebrainer.orchestrator.repository.ProblemHintRepository;
 import com.codebrainer.orchestrator.repository.ProblemRepository;
 import com.codebrainer.orchestrator.repository.ProblemTestRepository;
 import com.codebrainer.orchestrator.service.ProblemManagementService;
 import com.codebrainer.orchestrator.storage.StorageClient;
+import com.codebrainer.orchestrator.storage.LocalStorageClient;
+import java.util.List;
+import com.codebrainer.orchestrator.dto.ProblemTestDto;
+import com.codebrainer.orchestrator.dto.ProblemHintDto;
 
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -41,30 +45,28 @@ public class ProblemAdminController {
 
     @PostMapping
     @Transactional
-    public ResponseEntity<Long> upsertProblem(@RequestBody @Valid ProblemUpsertRequest request) throws IOException {
+    public ResponseEntity<Long> upsertProblem(@RequestBody @Valid ProblemRequest request) throws IOException {
         Problem problem = new Problem();
 
-        problem.setTitle(request.title());
+        problem.setTitle(request.getTitle());
         problem.setSlug(null);
-        problem.setTier(request.tier());
+        problem.setTier(request.getTier());
         problem.setLevel(null);
-        problem.setTimeMs(request.timeMs());
-        problem.setMemMb(request.memMb());
+        problem.setTimeMs(request.getTimeMs());
+        problem.setMemMb(request.getMemMb());
         problem.setVisibility(true);
         problem.setVersion(null);
-        problem.setInputFormat(request.inputFormat());
-        problem.setOutputFormat(request.outputFormat());
+        problem.setInputFormat(request.getInputFormat());
+        problem.setOutputFormat(request.getOutputFormat());
 
         Problem saved = problemManagementService.createProblem(
                 problem,
-                request.statement(),
-                request.categories(),
-                request.languages(),
-                request.constraints()
+                request.getStatementPath(),
+                request.getCategories()
         );
 
-        problemManagementService.addTestcases(saved, request.tests());
-        problemManagementService.addHints(saved, request.hints());
+        problemManagementService.addTestcases(saved, problemTestRepository.findAllByProblemIdOrderByCaseNo(request.getId()));
+        problemManagementService.addHints(saved, problemHintRepository.findAllByProblemIdOrderByStageAsc(request.getId()));
 
         return ResponseEntity.ok(saved.getId());
     }

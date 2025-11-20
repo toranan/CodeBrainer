@@ -11,12 +11,12 @@ C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\domain\ProblemTest.java
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\domain\Submission.java
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\domain\SubmissionResult.java
-C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\ProblemDetailResponse.java
+C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\ProblemResponse.java
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\ProblemHintDto.java
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\ProblemSummaryResponse.java
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\ProblemTestcaseResponse.java
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\ProblemTestDto.java
-C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\ProblemUpsertRequest.java
+C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\ProblemRequest.java
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\SubmissionRequest.java
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\dto\SubmissionResponse.java
 C:\Users\LEE SEUNG GYU\Desktop\동국대 25학년도\동국대 25-2학기\공개SW\CodeBrainer\backend\orchestrator\src\main\java\com\codebrainer\orchestrator\judge0\Judge0Client.java

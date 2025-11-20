@@ -3,7 +3,11 @@ FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
 COPY pom.xml .
-COPY src src
+COPY src ./src
+
+# 디버그 출력
+RUN echo "=== DEBUG: ProblemQueryService.java ===" && \
+    sed -n '1,200p' src/main/java/com/codebrainer/orchestrator/service/ProblemQueryService.java
 
 RUN mvn -f pom.xml dependency:go-offline
 RUN mvn -f pom.xml package -DskipTests

@@ -37,11 +37,11 @@ public class Submission {
     @Column(nullable = false)
     private Status status;
 
-    // @Column(name = "created_at", nullable = false)
-    // private OffsetDateTime createdAt;
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
 
-    // @Column(name = "updated_at", nullable = false)
-    // private OffsetDateTime updatedAt;
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
 
 }
 

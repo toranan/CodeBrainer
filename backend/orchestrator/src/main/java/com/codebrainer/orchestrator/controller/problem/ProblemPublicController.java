@@ -2,7 +2,10 @@ package com.codebrainer.orchestrator.controller.problem;
 
 import com.codebrainer.orchestrator.dto.ProblemRequest;
 import com.codebrainer.orchestrator.dto.ProblemListResponse;
+import com.codebrainer.orchestrator.dto.ProblemResponse;
 import com.codebrainer.orchestrator.service.ProblemQueryService;
+import com.codebrainer.orchestrator.storage.LocalStorageClient;
+import com.codebrainer.orchestrator.storage.StorageClient;
 
 import java.util.List;
 
@@ -32,7 +35,7 @@ public class ProblemPublicController {
     }
 
     @GetMapping("/id/{id}")
-    public ResponseEntity<ProblemDetailResponse> detailById(@PathVariable("id") Long id) {
+    public ResponseEntity<ProblemResponse> detailById(@PathVariable("id") Long id) {
         return problemQueryService.fetchDetailById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
