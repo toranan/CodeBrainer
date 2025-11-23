@@ -99,12 +99,13 @@ public class CodeReviewService {
             }
         }
 
-        // AI 리뷰 생성
+        // AI 리뷰 생성 (problemId 추가)
         String reviewContent = geminiAIService.generateCodeReview(
                 code,
                 problem.getTitle(),
                 problemStatement,
-                submission.getLanguageId()
+                submission.getLanguageId(),
+                problem.getId()
         );
 
         // 리뷰에서 평점 추출 (optional)
