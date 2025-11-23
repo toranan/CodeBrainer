@@ -1,8 +1,8 @@
 // Supabase 직접 연결 클라이언트 (Supabase JS 없이 REST API 사용)
 
-const SUPABASE_URL = 'https://sqwobsmtrgjuhgymfwtl.supabase.co';
-// Service Role Key - 모든 권한을 가진 비밀 키 (서버에서만 사용)
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd29ic210cmdqdWhneW1md3RsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjY3Nzk4OCwiZXhwIjoyMDc4MjUzOTg4fQ.OKVm1qdziTvtTvSi3zxwAaVYfecsnZUUUIKFjSq-zU4';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+// ⚠️ 환경 변수로 이동 - 절대 Git에 커밋하지 마세요!
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 interface SupabaseResponse<T> {
   data: T | null;
