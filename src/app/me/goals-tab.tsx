@@ -1,20 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { orchestratorFetch } from "@/server/orchestrator-client";
 
 export function GoalsTab() {
   const [weeklyGoal, setWeeklyGoal] = useState(5);
   const [monthlyGoal, setMonthlyGoal] = useState(20);
   const [dailyHours, setDailyHours] = useState(1);
+  const [userId, setUserId] = useState<number | null>(null);
 
-  // 임시 진행 상태 (나중에 API로 가져올 데이터)
-  const weeklyProgress = 3; // 이번 주 푼 문제 수
-  const monthlyProgress = 12; // 이번 달 푼 문제 수
+  useEffect(() => {
+    const userJson = localStorage.getItem("user");
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        setUserId(user.userId);
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  // 실제 API에서 진행 상태 가져오기
+  const { data: progressData } = useQuery({
+    queryKey: ["goals/progress", userId],
+    queryFn: async () => {
+      const weeklyData = await orchestratorFetch<{ content: any[] }>(
+        `/api/me/problems?userId=${userId}&status=AC&page=0&size=100`
+      );
+      
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const weeklyCount = weeklyData.content.filter((item: any) => {
+        const submissionDate = new Date(item.lastSubmission.createdAt);
+        return submissionDate >= oneWeekAgo;
+      }).length;
+
+      const monthlyCount = weeklyData.content.filter((item: any) => {
+        const submissionDate = new Date(item.lastSubmission.createdAt);
+        return submissionDate >= oneMonthAgo;
+      }).length;
+
+      return { weekly: weeklyCount, monthly: monthlyCount };
+    },
+    enabled: userId !== null,
+  });
+
+  const weeklyProgress = progressData?.weekly || 0;
+  const monthlyProgress = progressData?.monthly || 0;
 
   const handleSaveGoals = () => {
     // TODO: API 연동

@@ -3,28 +3,63 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { orchestratorFetch } from "@/server/orchestrator-client";
 
 export function ReviewTab({ userId }: { userId: number | null }) {
-  // userId는 나중에 API 호출에 사용될 수 있습니다
-  console.log("Current user ID:", userId);
-  // 임시 데이터 (나중에 API로 가져올 데이터)
-  const weakCategories = [
-    { name: "DP (동적 계획법)", accuracy: 40, problems: 15, correct: 6 },
-    { name: "그리디 알고리즘", accuracy: 65, problems: 10, correct: 6 },
-    { name: "그래프", accuracy: 55, problems: 12, correct: 7 },
-  ];
+  // 실제 API에서 데이터 가져오기
+  const { data: solvedProblems } = useQuery({
+    queryKey: ["me/all-problems", userId],
+    queryFn: () =>
+      orchestratorFetch<{ content: any[] }>(
+        `/api/me/problems?userId=${userId}&page=0&size=1000`
+      ),
+    enabled: userId !== null,
+  });
 
-  const wrongProblems = [
-    { id: 1, title: "피보나치 수열", attempts: 3, lastAttempt: "2일 전", category: "DP" },
-    { id: 2, title: "배낭 문제", attempts: 2, lastAttempt: "4일 전", category: "DP" },
-    { id: 3, title: "다익스트라", attempts: 1, lastAttempt: "1주일 전", category: "그래프" },
-  ];
+  // 카테고리별 통계 계산
+  const categoryStats: { [key: string]: { total: number; correct: number } } = {};
+  
+  solvedProblems?.content.forEach((item: any) => {
+    item.problem.categories.forEach((category: string) => {
+      if (!categoryStats[category]) {
+        categoryStats[category] = { total: 0, correct: 0 };
+      }
+      categoryStats[category].total++;
+      if (item.lastSubmission.status === "AC") {
+        categoryStats[category].correct++;
+      }
+    });
+  });
 
-  const recommendedProblems = [
-    { id: 101, title: "DP 기초 문제 1", category: "DP", difficulty: "Bronze", reason: "DP 취약" },
-    { id: 102, title: "DP 기초 문제 2", category: "DP", difficulty: "Bronze", reason: "DP 취약" },
-    { id: 103, title: "그리디 연습", category: "그리디", difficulty: "Silver", reason: "그리디 취약" },
-  ];
+  // 취약한 카테고리 찾기 (정답률 70% 이하)
+  const weakCategories = Object.entries(categoryStats)
+    .map(([name, stats]) => ({
+      name,
+      accuracy: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0,
+      problems: stats.total,
+      correct: stats.correct,
+    }))
+    .filter((cat) => cat.accuracy < 70 && cat.problems >= 3)
+    .sort((a, b) => a.accuracy - b.accuracy)
+    .slice(0, 5);
+
+  // 틀린 문제 목록 (WA 상태인 문제들)
+  const wrongProblems =
+    solvedProblems?.content
+      .filter((item: any) => item.lastSubmission.status !== "AC")
+      .map((item: any) => ({
+        id: item.problem.id,
+        title: item.problem.title,
+        slug: item.problem.slug || `problem-${item.problem.id}`,
+        attempts: 1, // API에서 제공하지 않으므로 기본값
+        lastAttempt: new Date(item.lastSubmission.createdAt).toLocaleDateString("ko-KR"),
+        category: item.problem.categories[0] || "기타",
+      }))
+      .slice(0, 10) || [];
+
+  // 추천 문제 (현재는 빈 배열, 필요시 별도 API 추가)
+  const recommendedProblems: any[] = [];
 
   return (
     <div className="space-y-6">
@@ -101,7 +136,7 @@ export function ReviewTab({ userId }: { userId: number | null }) {
                     <span className="rounded bg-slate-100 px-2 py-0.5">{problem.category}</span>
                   </div>
                 </div>
-                <Link href={`/problems/${problem.id}`}>
+                <Link href={`/problems/${problem.slug || problem.id}`}>
                   <Button size="sm" variant="outline">
                     다시 풀기
                   </Button>
@@ -110,7 +145,7 @@ export function ReviewTab({ userId }: { userId: number | null }) {
             ))}
             {wrongProblems.length === 0 && (
               <p className="py-8 text-center text-sm text-slate-500">
-                틀린 문제가 없어요! 완벽해요! 🎉
+                틀린 문제가 없어요! 완벽해요! 
               </p>
             )}
           </div>
@@ -172,35 +207,31 @@ export function ReviewTab({ userId }: { userId: number | null }) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="font-medium">DP 복습 진행도</span>
-                <span className="text-sm text-slate-600">2 / 5 완료</span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                <div className="h-full bg-orange-500 transition-all" style={{ width: "40%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="font-medium">그리디 복습 진행도</span>
-                <span className="text-sm text-slate-600">1 / 3 완료</span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                <div className="h-full bg-blue-500 transition-all" style={{ width: "33%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="font-medium">이번 주 복습 목표</span>
-                <span className="text-sm text-slate-600">3 / 5 완료</span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                <div className="h-full bg-green-500 transition-all" style={{ width: "60%" }} />
-              </div>
-            </div>
+            {weakCategories.slice(0, 3).map((category, idx) => {
+              const colors = ["orange", "blue", "green"];
+              const color = colors[idx % colors.length];
+              return (
+                <div key={category.name}>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-medium">{category.name} 복습 진행도</span>
+                    <span className="text-sm text-slate-600">
+                      {category.correct} / {category.problems} 완료
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className={`h-full bg-${color}-500 transition-all`}
+                      style={{ width: `${category.accuracy}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            {weakCategories.length === 0 && (
+              <p className="py-8 text-center text-sm text-slate-500">
+                취약한 알고리즘이 없어요! 잘하고 계세요! 
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

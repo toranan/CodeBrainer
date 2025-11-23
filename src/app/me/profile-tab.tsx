@@ -23,8 +23,40 @@ export function ProfileTab({ userInfo }: ProfileTabProps) {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: API 연동
-    toast.success("프로필이 업데이트되었습니다");
+    
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("로그인이 필요합니다");
+        return;
+      }
+
+      const response = await fetch("http://localhost:8081/api/users/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, bio }),
+      });
+
+      if (!response.ok) {
+        throw new Error("프로필 업데이트 실패");
+      }
+
+      // localStorage의 user 정보도 업데이트
+      const userJson = localStorage.getItem("user");
+      if (userJson) {
+        const user = JSON.parse(userJson);
+        user.name = name;
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      toast.success("프로필이 업데이트되었습니다");
+    } catch (error) {
+      console.error("프로필 업데이트 오류:", error);
+      toast.error("프로필 업데이트에 실패했습니다");
+    }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -40,11 +72,39 @@ export function ProfileTab({ userInfo }: ProfileTabProps) {
       return;
     }
 
-    // TODO: API 연동
-    toast.success("비밀번호가 변경되었습니다");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("로그인이 필요합니다");
+        return;
+      }
+
+      const response = await fetch("http://localhost:8081/api/users/change-password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.message || "비밀번호 변경에 실패했습니다");
+        return;
+      }
+
+      toast.success("비밀번호가 변경되었습니다");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      console.error("비밀번호 변경 오류:", error);
+      toast.error("비밀번호 변경에 실패했습니다");
+    }
   };
 
   return (

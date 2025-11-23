@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MockExamTimer } from "@/components/problem/mock-exam-timer";
 
 import { LANGUAGE_LABEL, MONACO_LANGUAGE_MAP } from "@/constants/languages";
 import type {
@@ -71,6 +73,9 @@ const defaultSnippet = `// TODO: 여기에 코드를 작성하세요.`;
 type SectionKey = "statement" | "hints";
 
 export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspaceProps) {
+  const searchParams = useSearchParams();
+  const isExamMode = searchParams.get("exam") !== null;
+  
   const [activeTab, setActiveTab] = useState<"statement" | "hints">("statement");
   const [language, setLanguage] = useState<SupportedLanguage>(
     problem.languages[0] ?? "PYTHON",
@@ -240,6 +245,18 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
       if (data.status === "AC") {
         toast.success("정답입니다! AI 리뷰를 준비중이에요.");
         await fetchAiReview(data.submissionId);
+        
+        // 모의고사 모드일 경우 완료 상태 업데이트
+        if (isExamMode) {
+          const stored = localStorage.getItem("currentMockExam");
+          if (stored) {
+            const examData = JSON.parse(stored);
+            if (!examData.completedProblems.includes(problem.slug)) {
+              examData.completedProblems.push(problem.slug);
+              localStorage.setItem("currentMockExam", JSON.stringify(examData));
+            }
+          }
+        }
       } else {
         toast("정답이 아닙니다. 결과 패널을 확인하세요.");
       }
@@ -392,8 +409,10 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   const isBusy = judgeState.status === "running" || judgeState.status === "submitting";
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <>
+      {isExamMode && <MockExamTimer />}
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-10">
+        <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <Badge className={difficultyColor}>{difficultyLabel}</Badge>
@@ -632,6 +651,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
         </div>
       </div>
     </div>
+    </>
   );
 }
 

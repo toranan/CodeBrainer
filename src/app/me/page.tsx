@@ -74,10 +74,10 @@ export default function MyPage() {
 
       <Tabs defaultValue="dashboard" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="dashboard">📊 대시보드</TabsTrigger>
-          <TabsTrigger value="profile">✏️ 프로필 편집</TabsTrigger>
-          <TabsTrigger value="goals">🎯 학습 목표</TabsTrigger>
-          <TabsTrigger value="review">📚 복습 노트</TabsTrigger>
+          <TabsTrigger value="dashboard">대시보드</TabsTrigger>
+          <TabsTrigger value="profile">프로필 편집</TabsTrigger>
+          <TabsTrigger value="goals">학습 목표</TabsTrigger>
+          <TabsTrigger value="review">복습 노트</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
