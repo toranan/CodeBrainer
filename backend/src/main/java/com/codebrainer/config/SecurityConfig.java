@@ -34,6 +34,9 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        System.out.println("======================================");
+        System.out.println("SecurityConfig 로딩됨!");
+        System.out.println("======================================");
         http
             // CSRF 비활성화 (REST API에서는 일반적으로 비활성화)
             .csrf(AbstractHttpConfigurer::disable)
@@ -48,8 +51,11 @@ public class SecurityConfig {
             
             // 요청 권한 설정
             .authorizeHttpRequests(auth -> auth
-                // 회원가입, 로그인, 에러 페이지는 인증 없이 접근 가능
-                .requestMatchers("/auth/**", "/public/**", "/error").permitAll()
+                // 회원가입, 로그인, 중복확인 등 인증 없이 접근 가능
+                // context-path가 /api라서 실제 경로는 /auth/signup 임
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/public/**").permitAll()
+                .requestMatchers("/error").permitAll()
                 // 나머지는 인증 필요
                 .anyRequest().authenticated()
             );
@@ -65,11 +71,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         
         // 허용할 Origin (프론트엔드 주소)
-        configuration.setAllowedOrigins(
-            Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:3001"
-            )
+        configuration.setAllowedOriginPatterns(
+            Arrays.asList("http://localhost:*")
         );
         
         // 허용할 HTTP 메서드

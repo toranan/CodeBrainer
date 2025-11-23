@@ -59,8 +59,22 @@ export default function SignUpPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/auth/check-username?username=${encodeURIComponent(formData.username)}`
+        `http://localhost:8081/api/auth/check-username?username=${encodeURIComponent(formData.username)}`
       );
+      
+      // 403 Forbidden 에러 체크
+      if (response.status === 403) {
+        toast.error("접근 권한이 없습니다. 서버 설정을 확인해주세요.");
+        console.error("403 Forbidden: SecurityConfig 설정 확인 필요");
+        return;
+      }
+      
+      // 기타 HTTP 에러 체크
+      if (!response.ok) {
+        toast.error(`서버 오류 (${response.status})`);
+        return;
+      }
+      
       const data = await response.json();
       
       setUsernameChecked(true);
@@ -73,7 +87,8 @@ export default function SignUpPage() {
         toast.error("이미 사용 중인 아이디입니다");
         setErrors((prev) => ({ ...prev, username: data.message }));
       }
-    } catch {
+    } catch (error) {
+      console.error("중복 확인 에러:", error);
       toast.error("아이디 중복 확인 중 오류가 발생했습니다");
     }
   };
@@ -125,7 +140,7 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8080/api/auth/signup", {
+      const response = await fetch("http://localhost:8081/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
