@@ -1,0 +1,5 @@
+n = int(input())
+coins = list(map(int, input().split()))
+
+# 서로 다른 크기의 개수 = set의 크기
+print(len(set(coins)))

@@ -86,10 +86,17 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   const [judgeState, setJudgeState] = useState<JudgeState>({ status: "idle" });
   const [reviewState, setReviewState] = useState<ReviewState>({ status: "idle" });
 
+  const [pageEntryTime] = useState(Date.now()); // 페이지 진입 시간
+
   const [hintStates, setHintStates] = useState<Record<number, HintState>>(() => {
     const initial: Record<number, HintState> = {};
+    const entryTime = Date.now();
     problem.hints.forEach((hint) => {
-      initial[hint.stage] = { status: "locked" };
+      const unlockTime = entryTime + hint.waitSeconds * 1000;
+      initial[hint.stage] = {
+        status: hint.waitSeconds === 0 ? "locked" : "cooldown",
+        nextAvailable: unlockTime
+      };
     });
     return initial;
   });
@@ -97,17 +104,29 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    const hasCooldown = Object.values(hintStates).some(
-      (state) => state.status === "cooldown" && state.nextAvailable,
-    );
+    // 1초마다 현재 시간 업데이트 (타이머용)
+    const timer = setInterval(() => {
+      const currentTime = Date.now();
+      setNow(currentTime);
 
-    if (!hasCooldown) {
-      return;
-    }
+      // 시간이 지난 힌트들을 locked 상태로 변경
+      setHintStates(prev => {
+        const updated = { ...prev };
+        let changed = false;
+        Object.keys(updated).forEach(key => {
+          const stage = parseInt(key);
+          const state = updated[stage];
+          if (state.status === "cooldown" && state.nextAvailable && currentTime >= state.nextAvailable) {
+            updated[stage] = { status: "locked" };
+            changed = true;
+          }
+        });
+        return changed ? updated : prev;
+      });
+    }, 1000);
 
-    const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [hintStates]);
+  }, []);
 
   const currentCode = codeMap[language] ?? defaultSnippet;
 
@@ -425,6 +444,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
                     hintStates={hintStates}
                     renderHintContent={renderHintContent}
                     onOpenHint={handleOpenHint}
+                    now={now}
                   />
                 )}
               </div>
@@ -724,46 +744,72 @@ const SectionContentHints = ({
   hintStates,
   renderHintContent,
   onOpenHint,
+  now,
 }: {
   problem: ProblemDetail;
   hintStates: Record<number, HintState>;
   renderHintContent: (hint: ProblemHint) => React.ReactNode;
   onOpenHint: (hint: ProblemHint) => void;
-}) => (
-  <SectionBlock sectionKey="hints" icon="💡" label="힌트">
-    <div className="space-y-4">
-      {problem.hints.map((hint) => {
-        const state = hintStates[hint.stage] ?? { status: "locked" };
-        const isUnlocked = state.status === "unlocked";
-        return (
-          <Card key={hint.stage} className="border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <div>
-                <CardTitle className="text-base text-slate-800">
-                  {hint.stage}단계 힌트 {hint.title ? `· ${hint.title}` : ""}
-                </CardTitle>
-                <CardDescription className="text-xs text-slate-500">
-                  대기시간 {Math.round(hint.waitSeconds / 60)}분
-                </CardDescription>
-              </div>
-              <Button
-                size="sm"
-                variant={isUnlocked ? "subtle" : "default"}
-                disabled={state.status === "loading" || isUnlocked}
-                onClick={() => onOpenHint(hint)}
-              >
-                {state.status === "loading"
-                  ? "열리는 중..."
-                  : isUnlocked
-                  ? "열람 완료"
-                  : "힌트 열기"}
-              </Button>
-            </CardHeader>
-            <CardContent>{renderHintContent(hint)}</CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  </SectionBlock>
-);
+  now: number;
+}) => {
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <SectionBlock sectionKey="hints" icon="💡" label="힌트">
+      <div className="space-y-4">
+        {problem.hints.map((hint) => {
+          const state = hintStates[hint.stage] ?? { status: "locked" };
+          const isUnlocked = state.status === "unlocked";
+          const isCooldown = state.status === "cooldown" && state.nextAvailable;
+          const isLocked = state.status === "locked" && !isUnlocked;
+
+          let remainingSeconds = 0;
+          if (isCooldown && state.nextAvailable) {
+            remainingSeconds = Math.max(0, Math.ceil((state.nextAvailable - now) / 1000));
+          }
+
+          const canOpen = isLocked && remainingSeconds === 0;
+
+          return (
+            <Card key={hint.stage} className="border-primary/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-base text-slate-800">
+                    {hint.stage}단계 힌트 {hint.title ? `· ${hint.title}` : ""}
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-500">
+                    {isCooldown && remainingSeconds > 0
+                      ? `${formatTime(remainingSeconds)} 후 열람 가능`
+                      : isUnlocked
+                      ? "열람 완료"
+                      : "열람 가능"}
+                  </CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  variant={isUnlocked ? "subtle" : "default"}
+                  disabled={state.status === "loading" || isUnlocked || !canOpen}
+                  onClick={() => onOpenHint(hint)}
+                >
+                  {state.status === "loading"
+                    ? "열리는 중..."
+                    : isUnlocked
+                    ? "열람 완료"
+                    : isCooldown && remainingSeconds > 0
+                    ? formatTime(remainingSeconds)
+                    : "힌트 열기"}
+                </Button>
+              </CardHeader>
+              <CardContent>{renderHintContent(hint)}</CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </SectionBlock>
+  );
+};
 

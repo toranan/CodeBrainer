@@ -15,7 +15,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: qpwoe1234
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
       STORAGE_BASE_PATH: /data/storage
-      JUDGE0_API_URL: http://54.252.182.149:2358
+      JUDGE0_API_URL: http://15.134.206.28:2358
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: guest
@@ -24,7 +24,7 @@ services:
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-pro}
       GEMINI_ENABLED: ${GEMINI_ENABLED:-true}
     volumes:
-      - orchestrator-storage:/data/storage
+      - ./orchestrator/storage:/data/storage
     ports:
       - "8080:8080"
 
