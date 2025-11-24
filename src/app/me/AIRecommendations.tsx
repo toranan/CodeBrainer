@@ -18,7 +18,7 @@ export default function AIRecommendations({ userId }: { userId: string }) {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base">🤖 AI 추천 복습 문제</CardTitle>
         <Button size="sm" onClick={() => refetch()} disabled={isLoading}>
           {isLoading ? "로딩 중..." : "새로고침"}
