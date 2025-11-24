@@ -1,61 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import { orchestratorFetch } from "@/server/orchestrator-client";
 
-export function GoalsTab() {
+interface GoalsTabProps {
+  overall?: {
+    solvedLast7Days?: number;
+    solvedLast30Days?: number;
+  };
+}
+
+export function GoalsTab({ overall }: GoalsTabProps) {
   const [weeklyGoal, setWeeklyGoal] = useState(5);
   const [monthlyGoal, setMonthlyGoal] = useState(20);
-  const [dailyHours, setDailyHours] = useState(1);
-  const [userId, setUserId] = useState<number | null>(null);
-
-  useEffect(() => {
-    const userJson = localStorage.getItem("user");
-    if (userJson) {
-      try {
-        const user = JSON.parse(userJson);
-        setUserId(user.userId);
-      } catch {
-        // ignore
-      }
-    }
-  }, []);
-
-  // 실제 API에서 진행 상태 가져오기
-  const { data: progressData } = useQuery({
-    queryKey: ["goals/progress", userId],
-    queryFn: async () => {
-      const weeklyData = await orchestratorFetch<{ content: any[] }>(
-        `/api/me/problems?userId=${userId}&status=AC&page=0&size=100`
-      );
-      
-      const now = new Date();
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-      const weeklyCount = weeklyData.content.filter((item: any) => {
-        const submissionDate = new Date(item.lastSubmission.createdAt);
-        return submissionDate >= oneWeekAgo;
-      }).length;
-
-      const monthlyCount = weeklyData.content.filter((item: any) => {
-        const submissionDate = new Date(item.lastSubmission.createdAt);
-        return submissionDate >= oneMonthAgo;
-      }).length;
-
-      return { weekly: weeklyCount, monthly: monthlyCount };
-    },
-    enabled: userId !== null,
-  });
-
-  const weeklyProgress = progressData?.weekly || 0;
-  const monthlyProgress = progressData?.monthly || 0;
+  const solvedThisWeek = overall?.solvedLast7Days ?? 0;
+  const solvedThisMonth = overall?.solvedLast30Days ?? 0;
 
   const handleSaveGoals = () => {
     // TODO: API 연동
@@ -75,18 +38,18 @@ export function GoalsTab() {
             <div className="mb-2 flex items-center justify-between">
               <h3 className="font-semibold">주간 목표: {weeklyGoal}문제</h3>
               <span className="text-sm text-slate-600">
-                {weeklyProgress} / {weeklyGoal} 완료
+                {solvedThisWeek} / {weeklyGoal} 완료
               </span>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
               <div
                 className="h-full bg-orange-500 transition-all"
-                style={{ width: `${(weeklyProgress / weeklyGoal) * 100}%` }}
+                style={{ width: `${Math.min((solvedThisWeek / Math.max(weeklyGoal, 1)) * 100, 100)}%` }}
               />
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              {weeklyGoal - weeklyProgress > 0
-                ? `${weeklyGoal - weeklyProgress}문제 남았어요! 조금만 더 힘내세요 💪`
+              {weeklyGoal - solvedThisWeek > 0
+                ? `${Math.max(weeklyGoal - solvedThisWeek, 0)}문제 남았어요! 조금만 더 힘내세요 💪`
                 : "목표 달성! 🎉"}
             </p>
           </div>
@@ -96,34 +59,20 @@ export function GoalsTab() {
             <div className="mb-2 flex items-center justify-between">
               <h3 className="font-semibold">월간 목표: {monthlyGoal}문제</h3>
               <span className="text-sm text-slate-600">
-                {monthlyProgress} / {monthlyGoal} 완료
+                {solvedThisMonth} / {monthlyGoal} 완료
               </span>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
               <div
                 className="h-full bg-blue-500 transition-all"
-                style={{ width: `${(monthlyProgress / monthlyGoal) * 100}%` }}
+                style={{ width: `${Math.min((solvedThisMonth / Math.max(monthlyGoal, 1)) * 100, 100)}%` }}
               />
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              이번 달 {Math.round((monthlyProgress / monthlyGoal) * 100)}% 달성!
+              이번 달 {Math.round((solvedThisMonth / Math.max(monthlyGoal, 1)) * 100)}% 달성!
             </p>
           </div>
 
-          {/* 일일 학습 시간 목표 */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="font-semibold">일일 학습 시간: {dailyHours}시간</h3>
-              <span className="text-sm text-slate-600">오늘 0.5시간</span>
-            </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
-              <div
-                className="h-full bg-green-500 transition-all"
-                style={{ width: "50%" }}
-              />
-            </div>
-            <p className="mt-1 text-xs text-slate-500">조금만 더 하면 목표 달성!</p>
-          </div>
         </CardContent>
       </Card>
 
@@ -157,20 +106,6 @@ export function GoalsTab() {
               onChange={(e) => setMonthlyGoal(parseInt(e.target.value) || 0)}
             />
             <p className="text-xs text-slate-500">한 달에 풀고 싶은 문제 수</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="dailyHours">일일 학습 시간 목표 (시간)</Label>
-            <Input
-              id="dailyHours"
-              type="number"
-              min="0.5"
-              max="12"
-              step="0.5"
-              value={dailyHours}
-              onChange={(e) => setDailyHours(parseFloat(e.target.value) || 0)}
-            />
-            <p className="text-xs text-slate-500">하루에 학습하고 싶은 시간</p>
           </div>
 
           <Button onClick={handleSaveGoals} className="w-full">

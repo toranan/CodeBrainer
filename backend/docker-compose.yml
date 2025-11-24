@@ -14,6 +14,7 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres.sqwobsmtrgjuhgymfwtl
       SPRING_DATASOURCE_PASSWORD: qpwoe1234
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
       STORAGE_BASE_PATH: /data/storage
       JUDGE0_API_URL: http://15.134.206.28:2358
       RABBITMQ_HOST: rabbitmq
@@ -26,7 +27,7 @@ services:
     volumes:
       - ./orchestrator/storage:/data/storage
     ports:
-      - "8080:8080"
+      - "8081:8080"
 
   postgres:
     image: postgres:16

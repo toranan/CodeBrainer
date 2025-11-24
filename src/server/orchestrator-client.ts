@@ -1,5 +1,5 @@
 
-const orchestratorBaseUrl = process.env.ORCHESTRATOR_BASE_URL ?? "http://localhost:8080";
+const orchestratorBaseUrl = process.env.ORCHESTRATOR_BASE_URL ?? "http://localhost:8081";
 
 async function orchestratorFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${orchestratorBaseUrl}${path}`;

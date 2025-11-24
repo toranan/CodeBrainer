@@ -36,10 +36,7 @@ public class SubmissionController {
     public ResponseEntity<SubmissionResponse> create(
             @RequestBody @Valid SubmissionRequest request
     ) throws IOException {
-        // TODO: 실제 사용자 인증 연동 후 userId 결정
-        // Prisma User 테이블의 UUID (String) 형식으로 변경됨
-        String mockUserId = "mock-user-id-temp"; // 임시 값, 실제 인증 연동 시 세션에서 가져와야 함
-        SubmissionResponse response = submissionService.createSubmission(mockUserId, request);
+        SubmissionResponse response = submissionService.createSubmission(request);
         return ResponseEntity.ok(response);
     }
 
@@ -54,6 +51,7 @@ public class SubmissionController {
         Map<String, Object> response = new java.util.HashMap<>();
         response.put("submissionId", submission.getId());
         response.put("status", submission.getStatus().name());
+        response.put("userId", submission.getUserId());
 
         if (result != null) {
             Map<String, Object> compile = new java.util.HashMap<>();

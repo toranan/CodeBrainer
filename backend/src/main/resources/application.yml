@@ -3,7 +3,7 @@ spring:
     name: codebrainer-backend
   
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres}
+    url: ${DATABASE_URL:jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres}
     username: ${DATABASE_USERNAME:postgres.sqwobsmtrgjuhgymfwtl}
     password: ${DATABASE_PASSWORD:qpwoe1234}
     driver-class-name: org.postgresql.Driver
@@ -17,7 +17,7 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
-  
+
   flyway:
     enabled: false  # 개발 중에는 Hibernate로만 스키마 관리
   

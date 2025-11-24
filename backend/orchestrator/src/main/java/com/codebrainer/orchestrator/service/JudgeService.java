@@ -17,11 +17,14 @@ import com.codebrainer.orchestrator.util.DiffResult;
 import com.codebrainer.orchestrator.util.DiffUtil;
 import com.codebrainer.orchestrator.util.SubmissionSummary;
 import com.codebrainer.orchestrator.util.SummaryAggregator;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,6 +103,9 @@ public class JudgeService {
                 String output = new String(storageClient.read(test.getOutputPath()));
                 log.debug("테스트케이스 {}: inputPath={}, outputPath={}", 
                     test.getId(), test.getInputPath(), test.getOutputPath());
+                
+                // 출력 정규화 (끝 공백/줄바꿈 제거)
+                output = output.trim();
                 
                 // Base64 인코딩
                 String encodedSourceCode = Base64.getEncoder().encodeToString(sourceCode.getBytes());
@@ -191,8 +197,24 @@ public class JudgeService {
             Judge0SubmissionResult result = results.get(i);
 
             String verdict = mapJudgeStatus(result.status());
-            String stdout = result.stdout() != null ? result.stdout() : "";
+            
+            // Base64 디코딩 및 정규화
+            String stdout = "";
+            if (result.stdout() != null && !result.stdout().isEmpty()) {
+                try {
+                    stdout = new String(Base64.getDecoder().decode(result.stdout()), StandardCharsets.UTF_8);
+                } catch (IllegalArgumentException e) {
+                    // Base64 디코딩 실패 시 원본 문자열 사용 (이미 디코딩된 경우)
+                    stdout = result.stdout();
+                }
+            }
+            
+            // 출력 끝의 공백/줄바꿈 제거
+            stdout = stdout.trim();
+            
             String expected = new String(storageClient.read(test.getOutputPath()));
+            // 예상 출력도 정규화
+            expected = expected.trim();
 
             Map<String, Object> resultItem = new HashMap<>();
             resultItem.put("testcaseId", test.getId());
@@ -219,14 +241,57 @@ public class JudgeService {
         submissionResult.setSubmission(submission);
         submissionResult.setCompileOk(summary.compileOk());
         submissionResult.setCompileMessage(summary.compileMessage());
-        submissionResult.setSummaryJson(summary.toJson());
+        
+        // 힌트 사용량을 summary_json에 추가
+        String summaryJson = summary.toJson();
+        Integer hintUsageCount = resolveHintUsageCount(submission);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> summaryMap = mapper.readValue(summaryJson, new TypeReference<Map<String, Object>>() {});
+            summaryMap.put("hintUsageCount", hintUsageCount);
+            summaryJson = mapper.writeValueAsString(summaryMap);
+        } catch (Exception e) {
+            log.warn("힌트 사용량을 summary_json에 추가하는 중 오류 발생: {}", e.getMessage());
+        }
+        
+        submissionResult.setSummaryJson(summaryJson);
         submissionResult.setTestsJson(summary.testsToJson(testResults));
 
         submissionResultRepository.save(submissionResult);
 
-        submission.setStatus(Submission.Status.COMPLETED);
+        Submission.Status finalStatus = determineFinalStatus(summary);
+        submission.setStatus(finalStatus);
         submission.setUpdatedAt(java.time.OffsetDateTime.now());
         submissionRepository.save(submission);
+    }
+
+    private Integer resolveHintUsageCount(Submission submission) {
+        if (submission.getHintUsageCount() != null) {
+            return submission.getHintUsageCount();
+        }
+        String metaPath = buildMetaPath(submission.getId());
+        try {
+            String metaJson = storageClient.readString(metaPath);
+            if (metaJson == null || metaJson.isBlank()) {
+                return 0;
+            }
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> metadata = mapper.readValue(metaJson, new TypeReference<Map<String, Object>>() {});
+            Object value = metadata.get("hintUsageCount");
+            if (value instanceof Number number) {
+                return number.intValue();
+            }
+            if (value instanceof String stringValue) {
+                return Integer.parseInt(stringValue);
+            }
+        } catch (Exception e) {
+            log.debug("제출 {} 메타데이터에서 힌트 사용량을 읽을 수 없습니다: {}", submission.getId(), e.getMessage());
+        }
+        return 0;
+    }
+
+    private String buildMetaPath(Long submissionId) {
+        return "submissions/" + submissionId + "/meta.json";
     }
 
     private List<Judge0SubmissionResult> pollResults(List<String> tokens) throws InterruptedException {
@@ -323,6 +388,46 @@ public class JudgeService {
             case INTERNAL_ERROR -> "ERR";
             default -> "PENDING";
         };
+    }
+
+    private Submission.Status determineFinalStatus(SubmissionSummary summary) {
+        if (!summary.compileOk()) {
+            return Submission.Status.CE;
+        }
+
+        Map<String, Integer> counts = summary.summary();
+        int total = counts.values().stream().mapToInt(Integer::intValue).sum();
+        if (total == 0) {
+            return Submission.Status.FAILED;
+        }
+
+        int acCount = counts.getOrDefault("AC", 0);
+        int waCount = counts.getOrDefault("WA", 0);
+        int tleCount = counts.getOrDefault("TLE", 0);
+        int mleCount = counts.getOrDefault("MLE", 0);
+        int reCount = counts.getOrDefault("RE", 0);
+        int errCount = counts.getOrDefault("ERR", 0);
+
+        if (acCount == total) {
+            return Submission.Status.AC;
+        }
+        if (reCount > 0) {
+            return Submission.Status.RE;
+        }
+        if (tleCount > 0) {
+            return Submission.Status.TLE;
+        }
+        if (mleCount > 0) {
+            return Submission.Status.MLE;
+        }
+        if (waCount > 0) {
+            return Submission.Status.WA;
+        }
+        if (errCount > 0) {
+            return Submission.Status.FAILED;
+        }
+
+        return Submission.Status.FAILED;
     }
 }
 

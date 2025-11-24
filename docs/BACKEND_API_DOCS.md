@@ -125,6 +125,7 @@ problems (문제)
 | `lang_id` | VARCHAR(32) | NOT NULL | 언어 식별자 (예: PYTHON, JAVA) |
 | `code_path` | VARCHAR(512) | NOT NULL | 제출된 코드 파일 경로 |
 | `status` | VARCHAR(32) | NOT NULL | 채점 작업 상태 (QUEUED, RUNNING, COMPLETED, FAILED) |
+| `hint_usage_count` | INTEGER | NOT NULL, DEFAULT 0 | 제출 시 사용한 힌트 개수 |
 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | 제출 시각 |
 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | 수정 시각 |
 

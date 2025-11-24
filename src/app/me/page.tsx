@@ -13,7 +13,7 @@ import { GoalsTab } from "./goals-tab";
 import { ReviewTab } from "./review-tab";
 
 interface UserInfo {
-  userId: number;
+  userId: string;
   email: string;
   name: string;
   role: string;
@@ -22,7 +22,7 @@ interface UserInfo {
 
 export default function MyPage() {
   const router = useRouter();
-  const [userId, setUserId] = useState<number | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [page, setPage] = useState(0);
   const size = 10;
@@ -36,8 +36,9 @@ export default function MyPage() {
     }
     try {
       const user = JSON.parse(userJson);
-      setUserId(user.userId);
-      setUserInfo(user);
+      const resolvedUserId = String(user.userId);
+      setUserId(resolvedUserId);
+      setUserInfo({ ...user, userId: resolvedUserId });
     } catch {
       router.push("/auth/signin");
     }
@@ -46,6 +47,13 @@ export default function MyPage() {
   const { data: list } = useQuery({
     queryKey: ["me/problems", userId, page, size],
     queryFn: () => getMyProblems({ userId: userId!, status: "AC", page, size }),
+    enabled: userId !== null,
+  });
+
+  // 시도한 문제 전체 목록 (AC 포함 모든 제출)
+  const { data: attemptedList } = useQuery({
+    queryKey: ["me/problems/attempted", userId, page, size],
+    queryFn: () => getMyProblems({ userId: userId!, status: "", page, size }), // 빈 문자열로 모든 제출 조회
     enabled: userId !== null,
   });
 
@@ -88,6 +96,7 @@ export default function MyPage() {
             recentItems={recentItems}
             items={items}
             list={list}
+            attemptedList={attemptedList}
             page={page}
             setPage={setPage}
             userId={userId}
@@ -99,7 +108,7 @@ export default function MyPage() {
         </TabsContent>
 
         <TabsContent value="goals" className="mt-6">
-          <GoalsTab />
+          <GoalsTab overall={overall} />
         </TabsContent>
 
         <TabsContent value="review" className="mt-6">

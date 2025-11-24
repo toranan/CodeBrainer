@@ -15,6 +15,9 @@ interface RunRequest {
   language: string
   code: string
   mode?: "run" | "submit"
+  userId?: string
+  token?: string | null
+  hintUsageCount?: number // 힌트 사용량
 }
 
 interface OrchestratorSubmissionResponse {
@@ -40,6 +43,8 @@ async function submitToOrchestrator(
   problemId: number,
   langId: string,
   code: string,
+  user: { userId: string; token?: string | null },
+  hintUsageCount: number = 0,
 ): Promise<OrchestratorSubmissionDetail> {
   // 1. 제출 생성
   const createResponse = await orchestratorFetch<OrchestratorSubmissionResponse>(
@@ -48,11 +53,14 @@ async function submitToOrchestrator(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(user.token ? { Authorization: `Bearer ${user.token}` } : {}),
       },
       body: JSON.stringify({
         problemId,
         langId,
         code,
+        userId: user.userId,
+        hintUsageCount, // 힌트 사용량 전송
       }),
     },
   )
@@ -118,7 +126,26 @@ export async function POST(request: Request) {
   if (body.mode === "submit") {
     try {
       // problem.detail.id를 숫자로 변환 (Orchestrator는 숫자 ID 필요)
-      const problemNumericId = parseInt(problem.detail.id, 10)
+      // id가 slug인 경우 Orchestrator API에서 직접 조회
+      let problemNumericId: number
+      
+      if (isNaN(parseInt(problem.detail.id, 10))) {
+        // id가 숫자가 아니면 slug로 Orchestrator에서 문제 조회
+        try {
+          const orchestratorProblem = await orchestratorFetch<{ id: number }>(
+            `/api/problems/${problem.detail.slug || problem.detail.id}`
+          )
+          problemNumericId = orchestratorProblem.id
+        } catch (error) {
+          return NextResponse.json(
+            { error: `문제를 찾을 수 없습니다: ${problem.detail.slug || problem.detail.id}` },
+            { status: 404 },
+          )
+        }
+      } else {
+        problemNumericId = parseInt(problem.detail.id, 10)
+      }
+      
       if (isNaN(problemNumericId)) {
         return NextResponse.json(
           { error: "문제 ID를 숫자로 변환할 수 없습니다." },
@@ -126,10 +153,25 @@ export async function POST(request: Request) {
         )
       }
 
+      if (!body.userId) {
+        return NextResponse.json(
+          { error: "로그인이 필요합니다." },
+          { status: 401 },
+        )
+      }
+
+      const hintUsageCount = body.hintUsageCount ?? 0;
+      console.log("제출 시 힌트 사용량:", hintUsageCount);
+      
       const orchestratorDetail = await submitToOrchestrator(
         problemNumericId,
         languageUpper,
         body.code,
+        {
+          userId: body.userId,
+          token: body.token,
+        },
+        hintUsageCount, // 힌트 사용량 전달
       )
 
       // Orchestrator 응답을 프론트엔드 형식으로 변환

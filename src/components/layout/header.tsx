@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ProblemHoverMenu } from "@/components/problem-hover-menu";
 
 interface User {
-  userId: number;
+  userId: string;
   email: string;
   name: string;
   role: string;

@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-import { useSearchParams } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MockExamTimer } from "@/components/problem/mock-exam-timer";
 
 import { LANGUAGE_LABEL, MONACO_LANGUAGE_MAP } from "@/constants/languages";
 import type {
@@ -73,9 +71,6 @@ const defaultSnippet = `// TODO: 여기에 코드를 작성하세요.`;
 type SectionKey = "statement" | "hints";
 
 export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspaceProps) {
-  const searchParams = useSearchParams();
-  const isExamMode = searchParams.get("exam") !== null;
-  
   const [activeTab, setActiveTab] = useState<"statement" | "hints">("statement");
   const [language, setLanguage] = useState<SupportedLanguage>(
     problem.languages[0] ?? "PYTHON",
@@ -90,18 +85,12 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
 
   const [judgeState, setJudgeState] = useState<JudgeState>({ status: "idle" });
   const [reviewState, setReviewState] = useState<ReviewState>({ status: "idle" });
-
-  const [pageEntryTime] = useState(Date.now()); // 페이지 진입 시간
+  const [authUser, setAuthUser] = useState<{ userId: string; token: string | null } | null>(null);
 
   const [hintStates, setHintStates] = useState<Record<number, HintState>>(() => {
     const initial: Record<number, HintState> = {};
-    const entryTime = Date.now();
     problem.hints.forEach((hint) => {
-      const unlockTime = entryTime + hint.waitSeconds * 1000;
-      initial[hint.stage] = {
-        status: hint.waitSeconds === 0 ? "locked" : "cooldown",
-        nextAvailable: unlockTime
-      };
+      initial[hint.stage] = { status: "locked" };
     });
     return initial;
   });
@@ -109,29 +98,47 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    // 1초마다 현재 시간 업데이트 (타이머용)
-    const timer = setInterval(() => {
-      const currentTime = Date.now();
-      setNow(currentTime);
-
-      // 시간이 지난 힌트들을 locked 상태로 변경
-      setHintStates(prev => {
-        const updated = { ...prev };
-        let changed = false;
-        Object.keys(updated).forEach(key => {
-          const stage = parseInt(key);
-          const state = updated[stage];
-          if (state.status === "cooldown" && state.nextAvailable && currentTime >= state.nextAvailable) {
-            updated[stage] = { status: "locked" };
-            changed = true;
+    const loadAuthUser = () => {
+      if (typeof window === "undefined") return;
+      const token = window.localStorage.getItem("token");
+      const userJson = window.localStorage.getItem("user");
+      if (userJson) {
+        try {
+          const parsed = JSON.parse(userJson);
+          const userId = parsed?.userId != null ? String(parsed.userId) : "";
+          if (userId) {
+            setAuthUser({ userId, token });
+            return;
           }
-        });
-        return changed ? updated : prev;
-      });
-    }, 1000);
+        } catch (err) {
+          console.error("사용자 정보 파싱 실패:", err);
+        }
+      }
+      setAuthUser(null);
+    };
 
-    return () => clearInterval(timer);
+    loadAuthUser();
+    window.addEventListener("storage", loadAuthUser);
+    window.addEventListener("authChange", loadAuthUser);
+
+    return () => {
+      window.removeEventListener("storage", loadAuthUser);
+      window.removeEventListener("authChange", loadAuthUser);
+    };
   }, []);
+
+  useEffect(() => {
+    const hasCooldown = Object.values(hintStates).some(
+      (state) => state.status === "cooldown" && state.nextAvailable,
+    );
+
+    if (!hasCooldown) {
+      return;
+    }
+
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [hintStates]);
 
   const currentCode = codeMap[language] ?? defaultSnippet;
 
@@ -197,6 +204,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           language,
           code: currentCode,
           mode: "run",
+          userId: authUser?.userId,
         }),
       });
 
@@ -220,6 +228,12 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   };
 
   const handleSubmit = async () => {
+    if (!authUser?.userId) {
+      toast.error("로그인이 필요합니다. 먼저 로그인해주세요.");
+      setJudgeState({ status: "idle" });
+      return;
+    }
+
     setJudgeState({ status: "submitting" });
     try {
       const res = await fetch("/api/judge/run", {
@@ -232,6 +246,8 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           language,
           code: currentCode,
           mode: "submit",
+          userId: authUser.userId,
+          token: authUser.token,
         }),
       });
 
@@ -245,18 +261,6 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
       if (data.status === "AC") {
         toast.success("정답입니다! AI 리뷰를 준비중이에요.");
         await fetchAiReview(data.submissionId);
-        
-        // 모의고사 모드일 경우 완료 상태 업데이트
-        if (isExamMode) {
-          const stored = localStorage.getItem("currentMockExam");
-          if (stored) {
-            const examData = JSON.parse(stored);
-            if (!examData.completedProblems.includes(problem.slug)) {
-              examData.completedProblems.push(problem.slug);
-              localStorage.setItem("currentMockExam", JSON.stringify(examData));
-            }
-          }
-        }
       } else {
         toast("정답이 아닙니다. 결과 패널을 확인하세요.");
       }
@@ -409,10 +413,8 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   const isBusy = judgeState.status === "running" || judgeState.status === "submitting";
 
   return (
-    <>
-      {isExamMode && <MockExamTimer />}
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-10">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <Badge className={difficultyColor}>{difficultyLabel}</Badge>
@@ -463,7 +465,6 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
                     hintStates={hintStates}
                     renderHintContent={renderHintContent}
                     onOpenHint={handleOpenHint}
-                    now={now}
                   />
                 )}
               </div>
@@ -651,7 +652,6 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
         </div>
       </div>
     </div>
-    </>
   );
 }
 
@@ -764,72 +764,46 @@ const SectionContentHints = ({
   hintStates,
   renderHintContent,
   onOpenHint,
-  now,
 }: {
   problem: ProblemDetail;
   hintStates: Record<number, HintState>;
   renderHintContent: (hint: ProblemHint) => React.ReactNode;
   onOpenHint: (hint: ProblemHint) => void;
-  now: number;
-}) => {
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <SectionBlock sectionKey="hints" icon="💡" label="힌트">
-      <div className="space-y-4">
-        {problem.hints.map((hint) => {
-          const state = hintStates[hint.stage] ?? { status: "locked" };
-          const isUnlocked = state.status === "unlocked";
-          const isCooldown = state.status === "cooldown" && state.nextAvailable;
-          const isLocked = state.status === "locked" && !isUnlocked;
-
-          let remainingSeconds = 0;
-          if (isCooldown && state.nextAvailable) {
-            remainingSeconds = Math.max(0, Math.ceil((state.nextAvailable - now) / 1000));
-          }
-
-          const canOpen = isLocked && remainingSeconds === 0;
-
-          return (
-            <Card key={hint.stage} className="border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle className="text-base text-slate-800">
-                    {hint.stage}단계 힌트 {hint.title ? `· ${hint.title}` : ""}
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-500">
-                    {isCooldown && remainingSeconds > 0
-                      ? `${formatTime(remainingSeconds)} 후 열람 가능`
-                      : isUnlocked
-                      ? "열람 완료"
-                      : "열람 가능"}
-                  </CardDescription>
-                </div>
-                <Button
-                  size="sm"
-                  variant={isUnlocked ? "subtle" : "default"}
-                  disabled={state.status === "loading" || isUnlocked || !canOpen}
-                  onClick={() => onOpenHint(hint)}
-                >
-                  {state.status === "loading"
-                    ? "열리는 중..."
-                    : isUnlocked
-                    ? "열람 완료"
-                    : isCooldown && remainingSeconds > 0
-                    ? formatTime(remainingSeconds)
-                    : "힌트 열기"}
-                </Button>
-              </CardHeader>
-              <CardContent>{renderHintContent(hint)}</CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </SectionBlock>
-  );
-};
+}) => (
+  <SectionBlock sectionKey="hints" icon="💡" label="힌트">
+    <div className="space-y-4">
+      {problem.hints.map((hint) => {
+        const state = hintStates[hint.stage] ?? { status: "locked" };
+        const isUnlocked = state.status === "unlocked";
+        return (
+          <Card key={hint.stage} className="border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-base text-slate-800">
+                  {hint.stage}단계 힌트 {hint.title ? `· ${hint.title}` : ""}
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  대기시간 {Math.round(hint.waitSeconds / 60)}분
+                </CardDescription>
+              </div>
+              <Button
+                size="sm"
+                variant={isUnlocked ? "subtle" : "default"}
+                disabled={state.status === "loading" || isUnlocked}
+                onClick={() => onOpenHint(hint)}
+              >
+                {state.status === "loading"
+                  ? "열리는 중..."
+                  : isUnlocked
+                  ? "열람 완료"
+                  : "힌트 열기"}
+              </Button>
+            </CardHeader>
+            <CardContent>{renderHintContent(hint)}</CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  </SectionBlock>
+);
 

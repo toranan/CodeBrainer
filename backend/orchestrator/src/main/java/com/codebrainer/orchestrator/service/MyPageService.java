@@ -4,10 +4,11 @@ import com.codebrainer.orchestrator.domain.Problem;
 import com.codebrainer.orchestrator.dto.*;
 import com.codebrainer.orchestrator.repository.ProblemRepository;
 import com.codebrainer.orchestrator.repository.SubmissionRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.springframework.transaction.annotation.Transactional;
-import org.hibernate.type.StandardBasicTypes;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -17,7 +18,11 @@ import org.springframework.stereotype.Service;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 마이페이지 서비스
@@ -28,6 +33,8 @@ public class MyPageService {
     private final EntityManager entityManager;
     private final ProblemRepository problemRepository;
     private final SubmissionRepository submissionRepository;
+    private static final TypeReference<Map<String, Object>> SUMMARY_TYPE = new TypeReference<>() {};
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MyPageService(
             EntityManager entityManager,
@@ -43,51 +50,48 @@ public class MyPageService {
      * 내가 푼 문제 목록 조회 (페이지네이션)
      */
     @Transactional(readOnly = true)
-    public Page<MySolvedItem> getMySolvedProblems(Long userId, String status, Pageable pageable) {
+    public Page<MySolvedItem> getMySolvedProblems(String userId, String status, Pageable pageable) {
         String[] statuses = parseStatuses(status);
         int offset = (int) pageable.getOffset();
         int size = pageable.getPageSize();
 
-        Query countQuery = entityManager.createNativeQuery("""
-                WITH latest AS (
-                    SELECT DISTINCT ON (s.problem_id)
-                           s.problem_id
-                    FROM submissions s
-                    WHERE s.user_id = :userId
-                      AND (:statuses IS NULL OR s.status = ANY(:statuses))
-                    ORDER BY s.problem_id, s.created_at DESC
-                )
-                SELECT COUNT(*)
-                FROM latest l
-                JOIN problems p ON p.id = l.problem_id
-                WHERE p.visibility = 'PUBLIC'
+        // status가 null이거나 빈 문자열이면 모든 제출을 반환
+        boolean filterByStatus = status != null && !status.trim().isEmpty();
+
+        StringBuilder baseWhere = new StringBuilder("""
+                FROM submissions s
+                JOIN problems p ON p.id = s.problem_id
+                LEFT JOIN submission_results sr ON sr.submission_id = s.id
+                WHERE s.user_id = :userId
+                  AND UPPER(p.visibility) = 'PUBLIC'
                 """);
+
+        if (filterByStatus) {
+            baseWhere.append(" AND s.status = ANY(:statuses)");
+        }
+
+        String countSql = "SELECT COUNT(*) " + baseWhere;
+
+        String dataSql = """
+                SELECT s.id, p.id, p.title, p.slug, p.tier, p.level, p.categories,
+                       s.status, s.lang_id, s.created_at, s.hint_usage_count, sr.summary_json
+                """ + baseWhere + """
+                ORDER BY s.created_at DESC
+                LIMIT :size OFFSET :offset
+                """;
+        
+        Query countQuery = entityManager.createNativeQuery(countSql);
         countQuery.setParameter("userId", userId);
-        countQuery.setParameter("statuses", statuses);
+        if (filterByStatus) {
+            countQuery.setParameter("statuses", statuses);
+        }
         Long totalElements = ((Number) countQuery.getSingleResult()).longValue();
 
-        Query dataQuery = entityManager.createNativeQuery("""
-                WITH latest AS (
-                    SELECT DISTINCT ON (s.problem_id)
-                           s.problem_id,
-                           s.status,
-                           s.lang_id,
-                           s.created_at
-                    FROM submissions s
-                    WHERE s.user_id = :userId
-                      AND (:statuses IS NULL OR s.status = ANY(:statuses))
-                    ORDER BY s.problem_id, s.created_at DESC
-                )
-                SELECT p.id, p.title, p.slug, p.tier, p.level, p.categories,
-                       l.status, l.lang_id, l.created_at
-                FROM latest l
-                JOIN problems p ON p.id = l.problem_id
-                WHERE p.visibility = 'PUBLIC'
-                ORDER BY l.created_at DESC
-                LIMIT :size OFFSET :offset
-                """);
+        Query dataQuery = entityManager.createNativeQuery(dataSql);
         dataQuery.setParameter("userId", userId);
-        dataQuery.setParameter("statuses", statuses);
+        if (filterByStatus) {
+            dataQuery.setParameter("statuses", statuses);
+        }
         dataQuery.setParameter("offset", offset);
         dataQuery.setParameter("size", size);
 
@@ -96,19 +100,40 @@ public class MyPageService {
 
         List<MySolvedItem> content = new ArrayList<>();
         for (Object[] row : results) {
-            Long problemId = ((Number) row[0]).longValue();
-            String title = (String) row[1];
-            String slug = (String) row[2];
-            String tier = (String) row[3];
-            Integer level = ((Number) row[4]).intValue();
-            List<String> categories = parseCategories(row[5]);
-            String submissionStatus = mapStatus((String) row[6]);
-            String lang = (String) row[7];
-            OffsetDateTime createdAt = ((java.sql.Timestamp) row[8]).toInstant().atOffset(java.time.ZoneOffset.UTC);
+            Long submissionId = ((Number) row[0]).longValue();
+            Long problemId = ((Number) row[1]).longValue();
+            String title = (String) row[2];
+            String slug = (String) row[3];
+            String tier = (String) row[4];
+            Integer level = ((Number) row[5]).intValue();
+            List<String> categories = parseCategories(row[6]);
+            String submissionStatus = mapStatus((String) row[7]);
+            String lang = (String) row[8];
+            Object createdValue = row[9];
+            OffsetDateTime createdAt;
+            if (createdValue instanceof java.sql.Timestamp timestamp) {
+                createdAt = timestamp.toInstant().atOffset(java.time.ZoneOffset.UTC);
+            } else if (createdValue instanceof java.time.Instant instant) {
+                createdAt = instant.atOffset(java.time.ZoneOffset.UTC);
+            } else if (createdValue instanceof java.time.OffsetDateTime offsetDateTime) {
+                createdAt = offsetDateTime;
+            } else if (createdValue instanceof java.time.LocalDateTime localDateTime) {
+                createdAt = localDateTime.atOffset(java.time.ZoneOffset.UTC);
+            } else {
+                throw new IllegalStateException("지원하지 않는 createdAt 타입: " + createdValue);
+            }
+
+            int hintUsageCount = 0;
+            if (row.length > 10 && row[10] != null) {
+                hintUsageCount = ((Number) row[10]).intValue();
+            }
+            if ((hintUsageCount == 0) && row.length > 11 && row[11] != null) {
+                hintUsageCount = extractHintUsageCount(row[11]);
+            }
 
             ProblemBrief problem = new ProblemBrief(problemId, title, slug, tier, level, categories);
-            LastSubmission lastSubmission = new LastSubmission(submissionStatus, lang, createdAt);
-            content.add(new MySolvedItem(problem, lastSubmission));
+            LastSubmission lastSubmission = new LastSubmission(submissionId, submissionStatus, lang, createdAt, hintUsageCount);
+            content.add(new MySolvedItem(problem, lastSubmission, hintUsageCount));
         }
 
         return new PageImpl<>(content, pageable, totalElements);
@@ -118,7 +143,7 @@ public class MyPageService {
      * 차트 데이터 조회
      */
     @Transactional(readOnly = true)
-    public ChartsResponse getChartsData(Long userId, int days) {
+    public ChartsResponse getChartsData(String userId, int days) {
         List<DailyCount> activityByDay = getActivityByDay(userId, days);
         List<TierCount> solvedCountByTier = getSolvedCountByTier(userId);
         List<LevelCount> solvedCountByLevel = getSolvedCountByLevel(userId);
@@ -136,9 +161,180 @@ public class MyPageService {
         );
     }
 
+    /**
+     * 취약 알고리즘 분석 (카테고리별 정답률)
+     */
+    @Transactional(readOnly = true)
+    public List<WeakCategoryStats> getWeakCategories(String userId) {
+        // 각 카테고리별로 전체 시도 수와 정답 수를 계산
+        Query query = entityManager.createNativeQuery("""
+                WITH category_submissions AS (
+                    SELECT 
+                        cat.category,
+                        s.problem_id,
+                        sr.summary_json,
+                        ROW_NUMBER() OVER (PARTITION BY s.problem_id ORDER BY s.created_at DESC) AS rn
+                    FROM submissions s
+                    JOIN problems p ON p.id = s.problem_id
+                    CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(p.categories) AS cat(category)
+                    LEFT JOIN submission_results sr ON sr.submission_id = s.id
+                    WHERE s.user_id = :userId
+                      AND UPPER(p.visibility) = 'PUBLIC'
+                      AND sr.summary_json IS NOT NULL
+                ),
+                category_stats AS (
+                    SELECT 
+                        category,
+                        COUNT(DISTINCT problem_id) AS total_problems,
+                        COUNT(DISTINCT CASE 
+                            WHEN (summary_json->>'verdict') = 'AC' THEN problem_id 
+                        END) AS correct_problems
+                    FROM category_submissions
+                    WHERE rn = 1
+                    GROUP BY category
+                )
+                SELECT 
+                    category,
+                    total_problems,
+                    correct_problems,
+                    CASE 
+                        WHEN total_problems > 0 
+                        THEN CAST(correct_problems AS DOUBLE PRECISION) / total_problems 
+                        ELSE 0.0 
+                    END AS accuracy
+                FROM category_stats
+                WHERE total_problems > 0
+                ORDER BY accuracy ASC, total_problems DESC
+                """);
+        query.setParameter("userId", userId);
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = query.getResultList();
+        return results.stream()
+                .map(row -> {
+                    String category = (String) row[0];
+                    Integer totalProblems = ((Number) row[1]).intValue();
+                    Integer correctProblems = ((Number) row[2]).intValue();
+                    Double accuracy = ((Number) row[3]).doubleValue();
+                    return new WeakCategoryStats(category, totalProblems, correctProblems, accuracy);
+                })
+                .toList();
+    }
+
+    /**
+     * 틀린 문제 목록 (정답이 아닌 제출이 있는 문제들, 중복 제외)
+     */
+    @Transactional(readOnly = true)
+    public List<WrongProblemItem> getWrongProblems(String userId) {
+        Query query = entityManager.createNativeQuery("""
+                WITH problem_last_submission AS (
+                    SELECT 
+                        s.problem_id,
+                        MAX(s.created_at) AS last_attempt_at,
+                        COUNT(*) AS attempt_count
+                    FROM submissions s
+                    JOIN problems p ON p.id = s.problem_id
+                    LEFT JOIN submission_results sr ON sr.submission_id = s.id
+                    WHERE s.user_id = :userId
+                      AND UPPER(p.visibility) = 'PUBLIC'
+                      AND sr.summary_json IS NOT NULL
+                      AND (sr.summary_json->>'verdict') != 'AC'
+                    GROUP BY s.problem_id
+                ),
+                problem_has_ac AS (
+                    SELECT DISTINCT s.problem_id
+                    FROM submissions s
+                    JOIN problems p ON p.id = s.problem_id
+                    LEFT JOIN submission_results sr ON sr.submission_id = s.id
+                    WHERE s.user_id = :userId
+                      AND UPPER(p.visibility) = 'PUBLIC'
+                      AND sr.summary_json IS NOT NULL
+                      AND (sr.summary_json->>'verdict') = 'AC'
+                )
+                SELECT 
+                    p.id,
+                    p.title,
+                    p.slug,
+                    p.tier,
+                    p.level,
+                    p.categories,
+                    pls.attempt_count,
+                    pls.last_attempt_at
+                FROM problem_last_submission pls
+                JOIN problems p ON p.id = pls.problem_id
+                LEFT JOIN problem_has_ac pac ON pac.problem_id = p.id
+                WHERE pac.problem_id IS NULL
+                ORDER BY pls.last_attempt_at DESC
+                """);
+        query.setParameter("userId", userId);
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = query.getResultList();
+        List<WrongProblemItem> items = new ArrayList<>();
+        for (Object[] row : results) {
+            Long problemId = ((Number) row[0]).longValue();
+            String title = (String) row[1];
+            String slug = (String) row[2];
+            String tier = (String) row[3];
+            Integer level = ((Number) row[4]).intValue();
+            List<String> categories = parseCategories(row[5]);
+            Integer attemptCount = ((Number) row[6]).intValue();
+            Object lastAttemptValue = row[7];
+            OffsetDateTime lastAttemptAt;
+            if (lastAttemptValue instanceof java.sql.Timestamp timestamp) {
+                lastAttemptAt = timestamp.toInstant().atOffset(java.time.ZoneOffset.UTC);
+            } else if (lastAttemptValue instanceof java.time.OffsetDateTime offsetDateTime) {
+                lastAttemptAt = offsetDateTime;
+            } else if (lastAttemptValue instanceof java.time.LocalDateTime localDateTime) {
+                lastAttemptAt = localDateTime.atOffset(java.time.ZoneOffset.UTC);
+            } else {
+                lastAttemptAt = OffsetDateTime.now();
+            }
+            items.add(new WrongProblemItem(
+                    problemId,
+                    title,
+                    slug,
+                    tier,
+                    level,
+                    categories,
+                    attemptCount,
+                    lastAttemptAt
+            ));
+        }
+        return items;
+    }
+
+    @Transactional(readOnly = true)
+    public GrowthTrendResponse getHintUsageGrowth(String userId, String tier, Integer level, int days) {
+        Query query = entityManager.createNativeQuery("""
+                SELECT TO_CHAR(s.created_at::date, 'YYYY-MM-DD') AS date, COALESCE(SUM(s.hint_usage_count), 0) AS total
+                FROM submissions s
+                JOIN problems p ON p.id = s.problem_id
+                WHERE s.user_id = :userId
+                  AND s.status IN ('AC', 'COMPLETED')
+                  AND s.created_at >= NOW() - (:days || ' days')::interval
+                  AND (:tier IS NULL OR UPPER(p.tier) = UPPER(:tier))
+                  AND (:level IS NULL OR p.level = :level)
+                GROUP BY date
+                ORDER BY date
+                """);
+        query.setParameter("userId", userId);
+        query.setParameter("days", days);
+        query.setParameter("tier", tier != null && !tier.isBlank() ? tier : null);
+        query.setParameter("level", level);
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = query.getResultList();
+        List<DailyCount> points = results.stream()
+                .map(row -> new DailyCount((String) row[0], ((Number) row[1]).intValue()))
+                .toList();
+        int totalHints = (int) points.stream().mapToLong(DailyCount::count).sum();
+        return new GrowthTrendResponse(points, totalHints);
+    }
+
     // === Helper Methods ===
 
-    private List<DailyCount> getActivityByDay(Long userId, int days) {
+    private List<DailyCount> getActivityByDay(String userId, int days) {
         Query query = entityManager.createNativeQuery("""
                 SELECT TO_CHAR(d::date, 'YYYY-MM-DD') AS date, COALESCE(cnt, 0) AS count
                 FROM GENERATE_SERIES(
@@ -165,7 +361,7 @@ public class MyPageService {
                 .toList();
     }
 
-    private List<TierCount> getSolvedCountByTier(Long userId) {
+    private List<TierCount> getSolvedCountByTier(String userId) {
         Query query = entityManager.createNativeQuery("""
                 SELECT p.tier, COUNT(*) AS count
                 FROM (
@@ -174,7 +370,7 @@ public class MyPageService {
                     WHERE s.user_id = :userId AND s.status IN ('AC', 'COMPLETED')
                 ) sp
                 JOIN problems p ON p.id = sp.problem_id
-                WHERE p.visibility = 'PUBLIC'
+                WHERE UPPER(p.visibility) = 'PUBLIC'
                 GROUP BY p.tier
                 """);
         query.setParameter("userId", userId);
@@ -186,7 +382,7 @@ public class MyPageService {
                 .toList();
     }
 
-    private List<LevelCount> getSolvedCountByLevel(Long userId) {
+    private List<LevelCount> getSolvedCountByLevel(String userId) {
         Query query = entityManager.createNativeQuery("""
                 SELECT p.level, COUNT(*) AS count
                 FROM (
@@ -195,7 +391,7 @@ public class MyPageService {
                     WHERE s.user_id = :userId AND s.status IN ('AC', 'COMPLETED')
                 ) sp
                 JOIN problems p ON p.id = sp.problem_id
-                WHERE p.visibility = 'PUBLIC'
+                WHERE UPPER(p.visibility) = 'PUBLIC'
                 GROUP BY p.level
                 ORDER BY p.level
                 """);
@@ -208,7 +404,7 @@ public class MyPageService {
                 .toList();
     }
 
-    private List<CategoryCount> getTopCategories(Long userId) {
+    private List<CategoryCount> getTopCategories(String userId) {
         Query query = entityManager.createNativeQuery("""
                 SELECT cat AS category, COUNT(*) AS count
                 FROM (
@@ -218,7 +414,7 @@ public class MyPageService {
                 ) sp
                 JOIN problems p ON p.id = sp.problem_id
                 CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(p.categories) AS c(cat)
-                WHERE p.visibility = 'PUBLIC'
+                WHERE UPPER(p.visibility) = 'PUBLIC'
                 GROUP BY cat
                 ORDER BY count DESC
                 LIMIT 10
@@ -232,12 +428,16 @@ public class MyPageService {
                 .toList();
     }
 
-    private List<LangCount> getLanguageUsage(Long userId, int days) {
+    private List<LangCount> getLanguageUsage(String userId, int days) {
         Query query = entityManager.createNativeQuery("""
                 SELECT lang_id AS lang, COUNT(*) AS count
-                FROM submissions
-                WHERE user_id = :userId
-                  AND created_at >= NOW() - (:days || ' days')::interval
+                FROM (
+                    SELECT DISTINCT problem_id, lang_id
+                    FROM submissions
+                    WHERE user_id = :userId
+                      AND status IN ('AC', 'COMPLETED')
+                      AND created_at >= NOW() - (:days || ' days')::interval
+                ) distinct_langs
                 GROUP BY lang_id
                 ORDER BY count DESC
                 """);
@@ -251,7 +451,7 @@ public class MyPageService {
                 .toList();
     }
 
-    private Overall getOverall(Long userId) {
+    private Overall getOverall(String userId) {
         Query attemptedQuery = entityManager.createNativeQuery("""
                 SELECT COUNT(*) FROM (
                     SELECT DISTINCT problem_id
@@ -263,28 +463,38 @@ public class MyPageService {
         Long attemptedProblems = ((Number) attemptedQuery.getSingleResult()).longValue();
 
         Query solvedQuery = entityManager.createNativeQuery("""
-                SELECT COUNT(*) FROM (
-                    SELECT DISTINCT problem_id
-                    FROM submissions
-                    WHERE user_id = :userId AND status IN ('AC', 'COMPLETED')
-                ) t
+                SELECT
+                    COUNT(DISTINCT CASE WHEN status IN ('AC', 'COMPLETED') THEN problem_id END) AS solved_total,
+                    COUNT(CASE WHEN status IN ('AC', 'COMPLETED') AND created_at >= NOW() - INTERVAL '7 days' THEN 1 END) AS solved_week,
+                    COUNT(CASE WHEN status IN ('AC', 'COMPLETED') AND created_at >= NOW() - INTERVAL '30 days' THEN 1 END) AS solved_month
+                FROM submissions
+                WHERE user_id = :userId
                 """);
         solvedQuery.setParameter("userId", userId);
-        Long solvedProblems = ((Number) solvedQuery.getSingleResult()).longValue();
+        Object[] solvedResult = (Object[]) solvedQuery.getSingleResult();
+        Long solvedProblems = solvedResult[0] != null ? ((Number) solvedResult[0]).longValue() : 0L;
+        Long solvedWeek = solvedResult[1] != null ? ((Number) solvedResult[1]).longValue() : 0L;
+        Long solvedMonth = solvedResult[2] != null ? ((Number) solvedResult[2]).longValue() : 0L;
 
         double acRate = attemptedProblems > 0 ? (double) solvedProblems / attemptedProblems : 0.0;
 
-        return new Overall(attemptedProblems, solvedProblems, acRate);
+        return new Overall(attemptedProblems, solvedProblems, acRate, solvedWeek, solvedMonth);
     }
 
     private String[] parseStatuses(String status) {
         if (status == null || status.trim().isEmpty()) {
             return new String[]{"AC", "COMPLETED"};
         }
-        return Arrays.stream(status.split(","))
+        List<String> parsed = Arrays.stream(status.split(","))
                 .map(String::trim)
                 .map(this::mapStatusFromInput)
-                .toArray(String[]::new);
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        Set<String> normalized = new LinkedHashSet<>(parsed);
+        if (normalized.contains("AC")) {
+            normalized.add("COMPLETED");
+        }
+        return normalized.toArray(new String[0]);
     }
 
     private String mapStatusFromInput(String input) {
@@ -295,16 +505,25 @@ public class MyPageService {
             case "TLE" -> "TLE";
             case "RE" -> "RE";
             case "CE" -> "CE";
+            case "MLE" -> "MLE";
+            case "FAILED" -> "FAILED";
+            case "QUEUED" -> "QUEUED";
+            case "RUNNING" -> "RUNNING";
             default -> input.toUpperCase();
         };
     }
 
     private String mapStatus(String dbStatus) {
         return switch (dbStatus) {
+            case "AC" -> "AC";
+            case "WA" -> "WA";
+            case "TLE" -> "TLE";
+            case "RE" -> "RE";
+            case "CE" -> "CE";
+            case "MLE" -> "MLE";
             case "COMPLETED" -> "AC";
-            case "QUEUED" -> "PENDING";
-            case "RUNNING" -> "PENDING";
-            case "FAILED" -> "WA";
+            case "QUEUED", "RUNNING" -> "PENDING";
+            case "FAILED", "ERR" -> "FAILED";
             default -> dbStatus;
         };
     }
@@ -319,6 +538,28 @@ public class MyPageService {
         } catch (ClassCastException e) {
             return new ArrayList<>();
         }
+    }
+
+    private int extractHintUsageCount(Object summaryJsonObject) {
+        if (summaryJsonObject == null) {
+            return 0;
+        }
+        try {
+            String summaryJson = summaryJsonObject instanceof String
+                    ? (String) summaryJsonObject
+                    : summaryJsonObject.toString();
+            Map<String, Object> summaryMap = objectMapper.readValue(summaryJson, SUMMARY_TYPE);
+            Object hintCount = summaryMap.get("hintUsageCount");
+            if (hintCount instanceof Number number) {
+                return number.intValue();
+            }
+            if (hintCount instanceof String stringValue && !stringValue.isBlank()) {
+                return Integer.parseInt(stringValue);
+            }
+        } catch (Exception ignored) {
+            // summary_json에 힌트 정보가 없거나 파싱 실패 시 0으로 처리
+        }
+        return 0;
     }
 }
 
