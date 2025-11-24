@@ -143,6 +143,12 @@ export function ReviewTab({ userId }: { userId: string | null }) {
                       <span className="rounded bg-slate-100 px-2 py-0.5">{problem.category}</span>
                     </div>
                   </div>
+                  <Link href={`/problems/${problem.slug || problem.id}`}>
+                    <Button size="sm" variant="outline">
+                      다시 풀기
+                    </Button>
+                  </Link>
+                </div>
               ))}
               {wrongProblems.length === 0 && (
                 <p className="py-8 text-center text-sm text-slate-500">
