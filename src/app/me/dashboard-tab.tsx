@@ -7,6 +7,7 @@ import ActivityHeatmap from "./ActivityHeatmap";
 import AlgorithmStats from "./AlgorithmStats";
 import AIRecommendations from "./AIRecommendations";
 import ProblemItem from "./ProblemItem";
+// import { GrowthGraph } from "./GrowthGraph"; // TODO: GrowthGraph 컴포넌트 생성 필요
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface DashboardTabProps {
@@ -16,9 +17,10 @@ interface DashboardTabProps {
   recentItems: any[];
   items: any[];
   list: any;
+  attemptedList?: any;
   page: number;
   setPage: (page: number) => void;
-  userId: number;
+  userId: string;
 }
 
 export function DashboardTab({
@@ -28,6 +30,7 @@ export function DashboardTab({
   recentItems,
   items,
   list,
+  attemptedList,
   page,
   setPage,
   userId,
@@ -49,7 +52,7 @@ export function DashboardTab({
                 <h2 className="text-xl font-semibold mb-2">
                   {userInfo?.name || userInfo?.email || "사용자"}
                 </h2>
-                <div className="flex gap-6 text-sm text-muted-foreground">
+                <div className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2 lg:grid-cols-3">
                   <div>
                     <span className="font-medium text-slate-700">풀이 수:</span>{" "}
                     {overall?.solvedProblems ?? 0}
@@ -61,6 +64,14 @@ export function DashboardTab({
                   <div>
                     <span className="font-medium text-slate-700">도전 문제:</span>{" "}
                     {overall?.attemptedProblems ?? 0}
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700">이번 주 정답:</span>{" "}
+                    {overall?.solvedLast7Days ?? "0"}
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-700">이번 달 정답:</span>{" "}
+                    {overall?.solvedLast30Days ?? "0"}
                   </div>
                 </div>
               </div>
@@ -80,6 +91,9 @@ export function DashboardTab({
         <h2 className="mb-3 text-lg font-semibold">📈 알고리즘별 통계</h2>
         <AlgorithmStats data={charts} />
       </section>
+
+      {/* 성장 그래프 */}
+      {/* TODO: GrowthGraph 컴포넌트 생성 후 활성화 */}
 
       {/* AI 추천 복습 문제 */}
       <section className="mb-8">
@@ -106,27 +120,27 @@ export function DashboardTab({
 
       <Separator className="my-8" />
 
-      {/* 내가 푼 문제 전체 목록 */}
+      {/* 시도한 문제 전체 목록 */}
       <section className="mb-10">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">📋 내가 푼 문제 전체 목록</h2>
+          <h2 className="text-lg font-semibold">📋 시도한 문제 전체 목록</h2>
           <div className="text-sm text-muted-foreground">
-            총 {list?.totalPages ?? 0} 페이지
+            총 {attemptedList?.totalPages ?? 0} 페이지
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4">
-          {items.map((item, idx) => (
+          {(attemptedList?.content ?? []).map((item: any, idx: number) => (
             <ProblemItem key={idx} item={item} userId={userId} />
           ))}
-          {items.length === 0 && (
+          {(attemptedList?.content ?? []).length === 0 && (
             <Card>
               <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                아직 푼 문제가 없어요.
+                아직 시도한 문제가 없어요.
               </CardContent>
             </Card>
           )}
         </div>
-        {list && list.totalPages > 1 && (
+        {attemptedList && attemptedList.totalPages > 1 && (
           <div className="mt-4 flex justify-center gap-2">
             <Button
               variant="outline"
@@ -136,12 +150,12 @@ export function DashboardTab({
               이전
             </Button>
             <span className="flex items-center px-4 text-sm">
-              {page + 1} / {list.totalPages}
+              {page + 1} / {attemptedList.totalPages}
             </span>
             <Button
               variant="outline"
-              onClick={() => setPage(Math.min(list.totalPages - 1, page + 1))}
-              disabled={page >= list.totalPages - 1}
+              onClick={() => setPage(Math.min(attemptedList.totalPages - 1, page + 1))}
+              disabled={page >= attemptedList.totalPages - 1}
             >
               다음
             </Button>

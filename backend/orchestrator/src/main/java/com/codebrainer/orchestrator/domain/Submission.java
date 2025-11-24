@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -18,7 +19,16 @@ import java.time.OffsetDateTime;
 public class Submission {
 
     public enum Status {
-        QUEUED, RUNNING, COMPLETED, FAILED
+        QUEUED,
+        RUNNING,
+        COMPLETED,
+        AC,
+        WA,
+        TLE,
+        RE,
+        CE,
+        MLE,
+        FAILED
     }
 
     @Id
@@ -47,6 +57,9 @@ public class Submission {
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    @Column(name = "hint_usage_count", nullable = false)
+    private Integer hintUsageCount = 0;
 
     public Long getId() {
         return id;
@@ -106,6 +119,14 @@ public class Submission {
 
     public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Integer getHintUsageCount() {
+        return hintUsageCount;
+    }
+
+    public void setHintUsageCount(Integer hintUsageCount) {
+        this.hintUsageCount = hintUsageCount;
     }
 }
 

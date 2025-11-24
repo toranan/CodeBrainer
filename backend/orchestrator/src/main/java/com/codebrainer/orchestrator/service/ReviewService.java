@@ -31,7 +31,7 @@ public class ReviewService {
      * 단건 복습 추천
      */
     @Transactional(readOnly = true)
-    public ReviewResponse getReviewRecommendations(Long userId, Long baseProblemId, int limit) {
+    public ReviewResponse getReviewRecommendations(String userId, Long baseProblemId, int limit) {
         Problem baseProblem = problemRepository.findById(baseProblemId)
                 .orElseThrow(() -> new IllegalArgumentException("기준 문제를 찾을 수 없습니다."));
 
@@ -48,7 +48,7 @@ public class ReviewService {
                 )
                 SELECT p.id, p.title, p.slug, p.tier, p.level, p.categories
                 FROM problems p
-                WHERE p.visibility = 'PUBLIC'
+                WHERE UPPER(p.visibility) = 'PUBLIC'
                   AND p.id <> :baseProblemId
                   AND NOT EXISTS (
                       SELECT 1 FROM submissions s
@@ -112,7 +112,7 @@ public class ReviewService {
      * 일괄 복습 추천
      */
     @Transactional(readOnly = true)
-    public BulkReviewResponse getBulkReviewRecommendations(Long userId, int recent, int perBaseLimit) {
+    public BulkReviewResponse getBulkReviewRecommendations(String userId, int recent, int perBaseLimit) {
         List<Long> recentProblemIds = getRecentSolvedProblemIds(userId, recent);
         
         List<ReviewResponse> items = new ArrayList<>();
@@ -124,7 +124,7 @@ public class ReviewService {
         return new BulkReviewResponse(items);
     }
 
-    private List<Long> getRecentSolvedProblemIds(Long userId, int limit) {
+    private List<Long> getRecentSolvedProblemIds(String userId, int limit) {
         Query query = entityManager.createNativeQuery("""
                 SELECT DISTINCT s.problem_id
                 FROM submissions s

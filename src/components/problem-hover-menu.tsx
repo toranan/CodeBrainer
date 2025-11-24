@@ -27,9 +27,12 @@ export function ProblemHoverMenu() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <span className="hover:text-primary cursor-pointer text-sm font-medium text-muted-foreground">
+      <Link
+        href="/problems"
+        className="hover:text-primary cursor-pointer text-sm font-medium text-muted-foreground"
+      >
         문제 목록
-      </span>
+      </Link>
 
       {isOpen && (
         <div

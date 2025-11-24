@@ -1,24 +1,62 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { getWeakCategories, getWrongProblems } from "@/server/mypage-client";
 
-export function ReviewTab({ userId }: { userId: number | null }) {
-  // userId는 나중에 API 호출에 사용될 수 있습니다
-  console.log("Current user ID:", userId);
-  // 임시 데이터 (나중에 API로 가져올 데이터)
-  const weakCategories = [
-    { name: "DP (동적 계획법)", accuracy: 40, problems: 15, correct: 6 },
-    { name: "그리디 알고리즘", accuracy: 65, problems: 10, correct: 6 },
-    { name: "그래프", accuracy: 55, problems: 12, correct: 7 },
-  ];
+export function ReviewTab({ userId }: { userId: string | null }) {
+  const { data: weakCategoriesData, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ["me/review/weak-categories", userId],
+    queryFn: () => getWeakCategories({ userId: userId! }),
+    enabled: userId !== null,
+  });
 
-  const wrongProblems = [
-    { id: 1, title: "피보나치 수열", attempts: 3, lastAttempt: "2일 전", category: "DP" },
-    { id: 2, title: "배낭 문제", attempts: 2, lastAttempt: "4일 전", category: "DP" },
-    { id: 3, title: "다익스트라", attempts: 1, lastAttempt: "1주일 전", category: "그래프" },
-  ];
+  const { data: wrongProblemsData, isLoading: isLoadingWrongProblems } = useQuery({
+    queryKey: ["me/review/wrong-problems", userId],
+    queryFn: () => getWrongProblems({ userId: userId! }),
+    enabled: userId !== null,
+  });
+
+  const weakCategories =
+    weakCategoriesData?.map((cat) => ({
+      name: cat.category,
+      accuracy: Math.round(cat.accuracy * 100),
+      problems: cat.totalProblems,
+      correct: cat.correctProblems,
+    })) ?? [];
+
+  const wrongProblems =
+    wrongProblemsData?.map((problem) => {
+      const lastAttemptDate = new Date(problem.lastAttemptAt);
+      const now = new Date();
+      const diffMs = now.getTime() - lastAttemptDate.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      let lastAttempt: string;
+      if (diffDays === 0) {
+        lastAttempt = "오늘";
+      } else if (diffDays === 1) {
+        lastAttempt = "1일 전";
+      } else if (diffDays < 7) {
+        lastAttempt = `${diffDays}일 전`;
+      } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        lastAttempt = `${weeks}주일 전`;
+      } else {
+        const months = Math.floor(diffDays / 30);
+        lastAttempt = `${months}개월 전`;
+      }
+
+      return {
+        id: problem.problemId,
+        title: problem.title,
+        attempts: problem.attemptCount,
+        lastAttempt,
+        category: problem.categories?.[0] ?? "기타",
+        slug: problem.slug,
+      };
+    }) ?? [];
 
   const recommendedProblems = [
     { id: 101, title: "DP 기초 문제 1", category: "DP", difficulty: "Bronze", reason: "DP 취약" },
@@ -34,53 +72,57 @@ export function ReviewTab({ userId }: { userId: number | null }) {
           <CardTitle>🔍 취약 알고리즘 분석</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {weakCategories.map((category, idx) => (
-              <div key={idx} className="rounded-lg border p-4">
-                <div className="mb-3 flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold">{category.name}</h3>
-                    <p className="text-sm text-slate-600">
-                      {category.correct} / {category.problems} 문제 정답
+          {isLoadingCategories ? (
+            <p className="py-8 text-center text-sm text-slate-500">로딩 중...</p>
+          ) : (
+            <div className="space-y-4">
+              {weakCategories.map((category, idx) => (
+                <div key={idx} className="rounded-lg border p-4">
+                  <div className="mb-3 flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold">{category.name}</h3>
+                      <p className="text-sm text-slate-600">
+                        {category.correct} / {category.problems} 문제 정답
+                      </p>
+                    </div>
+                    <div
+                      className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                        category.accuracy < 50
+                          ? "bg-red-100 text-red-800"
+                          : category.accuracy < 70
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {category.accuracy}%
+                    </div>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className={`h-full transition-all ${
+                        category.accuracy < 50
+                          ? "bg-red-500"
+                          : category.accuracy < 70
+                          ? "bg-yellow-500"
+                          : "bg-green-500"
+                      }`}
+                      style={{ width: `${category.accuracy}%` }}
+                    />
+                  </div>
+                  {category.accuracy < 70 && (
+                    <p className="mt-2 text-xs text-slate-500">
+                      ⚠️ 이 분야 복습이 필요해요!
                     </p>
-                  </div>
-                  <div
-                    className={`rounded-full px-3 py-1 text-sm font-semibold ${
-                      category.accuracy < 50
-                        ? "bg-red-100 text-red-800"
-                        : category.accuracy < 70
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                    }`}
-                  >
-                    {category.accuracy}%
-                  </div>
+                  )}
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className={`h-full transition-all ${
-                      category.accuracy < 50
-                        ? "bg-red-500"
-                        : category.accuracy < 70
-                        ? "bg-yellow-500"
-                        : "bg-green-500"
-                    }`}
-                    style={{ width: `${category.accuracy}%` }}
-                  />
-                </div>
-                {category.accuracy < 70 && (
-                  <p className="mt-2 text-xs text-slate-500">
-                    ⚠️ 이 분야 복습이 필요해요!
-                  </p>
-                )}
-              </div>
-            ))}
-            {weakCategories.length === 0 && (
-              <p className="py-8 text-center text-sm text-slate-500">
-                아직 데이터가 충분하지 않아요. 문제를 더 풀어보세요!
-              </p>
-            )}
-          </div>
+              ))}
+              {weakCategories.length === 0 && (
+                <p className="py-8 text-center text-sm text-slate-500">
+                  아직 데이터가 충분하지 않아요. 문제를 더 풀어보세요!
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -90,30 +132,34 @@ export function ReviewTab({ userId }: { userId: number | null }) {
           <CardTitle>❌ 틀린 문제 복습하기</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {wrongProblems.map((problem) => (
-              <div key={problem.id} className="flex items-center justify-between rounded-lg border p-4">
-                <div className="flex-1">
-                  <h3 className="font-medium">{problem.title}</h3>
-                  <div className="mt-1 flex gap-3 text-xs text-slate-500">
-                    <span>🔁 {problem.attempts}회 시도</span>
-                    <span>🕒 {problem.lastAttempt}</span>
-                    <span className="rounded bg-slate-100 px-2 py-0.5">{problem.category}</span>
+          {isLoadingWrongProblems ? (
+            <p className="py-8 text-center text-sm text-slate-500">로딩 중...</p>
+          ) : (
+            <div className="space-y-3">
+              {wrongProblems.map((problem) => (
+                <div key={problem.id} className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="flex-1">
+                    <h3 className="font-medium">{problem.title}</h3>
+                    <div className="mt-1 flex gap-3 text-xs text-slate-500">
+                      <span>🔁 {problem.attempts}회 시도</span>
+                      <span>🕒 {problem.lastAttempt}</span>
+                      <span className="rounded bg-slate-100 px-2 py-0.5">{problem.category}</span>
+                    </div>
                   </div>
+                  <Link href={`/problems/${problem.slug || problem.id}`}>
+                    <Button size="sm" variant="outline">
+                      다시 풀기
+                    </Button>
+                  </Link>
                 </div>
-                <Link href={`/problems/${problem.id}`}>
-                  <Button size="sm" variant="outline">
-                    다시 풀기
-                  </Button>
-                </Link>
-              </div>
-            ))}
-            {wrongProblems.length === 0 && (
-              <p className="py-8 text-center text-sm text-slate-500">
-                틀린 문제가 없어요! 완벽해요! 🎉
-              </p>
-            )}
-          </div>
+              ))}
+              {wrongProblems.length === 0 && (
+                <p className="py-8 text-center text-sm text-slate-500">
+                  틀린 문제가 없어요! 완벽해요! 🎉
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -227,6 +227,7 @@ CodeBrainer는 **두 개의 독립적인 시스템**으로 구성되어 있습�
 | `lang_id` | VARCHAR(32) | NOT NULL | 언어 식별자 (PYTHON, JAVA, CPP 등) |
 | `code_path` | VARCHAR(512) | NOT NULL | 제출된 코드 파일 경로 |
 | `status` | VARCHAR(32) | NOT NULL | 채점 상태 (QUEUED, RUNNING, COMPLETED, FAILED) |
+| `hint_usage_count` | INTEGER | NOT NULL, DEFAULT 0 | 제출 시 사용된 힌트 개수 |
 | `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | 제출 시각 |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | 수정 시각 |
 
