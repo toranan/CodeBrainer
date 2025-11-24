@@ -47,28 +47,32 @@ public class ProblemAdminController {
     @Transactional
     public ResponseEntity<Long> upsertProblem(@RequestBody @Valid ProblemRequest request) throws IOException {
         Problem problem = new Problem();
-
+        problem.setId(request.getId());
         problem.setTitle(request.getTitle());
-        problem.setSlug(null);
+        problem.setSlug("");
         problem.setTier(request.getTier());
-        problem.setLevel(null);
+        problem.setLevel(0);
         problem.setTimeMs(request.getTimeMs());
         problem.setMemMb(request.getMemMb());
-        problem.setVisibility(true);
-        problem.setVersion(null);
+        problem.setVisibility("PUBLIC");
+        problem.setVersion(1);
         problem.setInputFormat(request.getInputFormat());
         problem.setOutputFormat(request.getOutputFormat());
 
         Problem saved = problemManagementService.createProblem(
                 problem,
-                request.getStatementPath(),
+                request.getStatement(),
                 request.getCategories()
         );
 
-        problemManagementService.addTestcases(saved, problemTestRepository.findAllByProblemIdOrderByCaseNo(request.getId()));
-        problemManagementService.addHints(saved, problemHintRepository.findAllByProblemIdOrderByStageAsc(request.getId()));
+        problemManagementService.addTestcases(saved,
+                problemTestRepository.findAllByProblemIdOrderByCaseNo(request.getId())
+        );
+
+        problemManagementService.addHints(saved,
+                problemHintRepository.findAllByProblemIdOrderByStageAsc(request.getId())
+        );
 
         return ResponseEntity.ok(saved.getId());
     }
 }
-

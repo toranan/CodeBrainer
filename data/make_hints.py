@@ -16,7 +16,7 @@ def fetch_problem():
     response.raise_for_status()
     return response.json()
 
-def generate_hint(problem_id, tier, time_ms, mem_mb):
+def generate_hint(problem_id, tier, time_ms, mem_mb, categories):
     system_message = (
         "너는 문제를 보고 소스코드 작성에 대해 학생이 문제를 차근차근 풀 수 있도록 도와주는 선생님이야. "
         "힌트는 숫자로 주어지는 난이도와 동일한 개수로 1번부터 최대 4번까지 생성이 될 거야. 각 힌트의 내용은 이렇게 해줘:\n"
@@ -31,8 +31,13 @@ def generate_hint(problem_id, tier, time_ms, mem_mb):
         "4. 이모티콘은 최대한 쓰지 말고, 미사여구도 최대한 붙이지 마."
     )
 
-    user_message = "{problem_id}, {tier}, {time_ms}, {mem_mb}" # api로 불러오기
-
+    user_message = (
+        "문제 ID: {problem_id}\n"
+        "난이도(티어): {tier}\n"
+        "시간 제한(ms): {time_ms}\n"
+        "메모리 제한(MB): {mem_mb}\n"
+        "알고리즘 분류: {categories}"
+    )
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_message),
         ("user", user_message)
@@ -45,16 +50,17 @@ def generate_hint(problem_id, tier, time_ms, mem_mb):
         "problem_id": problem_id,
         "tier": tier,
         "time_ms": time_ms,
-        "mem_mb": mem_mb
+        "mem_mb": mem_mb,
+        "categories": ", ".join(categories)
     })
     return response["text"]
 
 def upload_hint(problem_id, hint_text):
+    url = f"{POST_API_URL}/{problem_id}"
     data = {
-        "problem_id": problem_id,
-        "hint": hint_text
+        "content": hint_text
     }
-    response = requests.post(POST_API_URL, json=data)
+    response = requests.post(url, json=data)
     response.raise_for_status()
     return response.json()
 
@@ -65,10 +71,11 @@ def run():
     tier = problem["tier"]
     time_ms = problem["time_ms"]
     mem_mb = problem["mem_mb"]
+    categories = problem["categories"]
 
     print(f"[+] 문제 ID 받음: {problem_id}")
 
-    hint = generate_hint(problem_id, tier, time_ms, mem_mb)
+    hint = generate_hint(problem_id, tier, time_ms, mem_mb, categories)
     print("[+] 힌트 생성 완료")
 
     result = upload_hint(problem_id, hint)

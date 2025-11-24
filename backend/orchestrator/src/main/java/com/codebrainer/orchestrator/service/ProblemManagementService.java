@@ -50,19 +50,19 @@ public class ProblemManagementService {
     }
 
     private String buildStatementPath(Long problemId) {
-        return "problems/" + problemId + "/statement.md";
+        return "problems/problem-" + problemId + "/statement.md";
     }
 
     private String buildTestcaseInputPath(Long problemId, Integer caseNo) {
-        return "problems/" + problemId + "/tests/" + caseNo + ".in";
+        return "problems/problem-" + problemId + "/tests/" + caseNo + ".in";
     }
 
     private String buildTestcaseOutputPath(Long problemId, Integer caseNo) {
-        return "problems/" + problemId + "/tests/" + caseNo + ".out";
+        return "problems/problem-" + problemId + "/tests/" + caseNo + ".out";
     }
 
     private String buildHintContentPath(Long problemId, int stage) {
-        return "problems/" + problemId + "/hints/" + stage + ".md";
+        return "problems/problem-" + problemId + "/hints/" + stage + ".md";
     }
 
     @Transactional
@@ -77,7 +77,7 @@ public class ProblemManagementService {
 
         Problem saved = problemRepository.save(problem);
 
-        String statementPath = buildStatementPath(saved.getId());
+        String statementPath = buildStatementPath(problem.getId());
         storageClient.saveString(statementPath, statement);
         saved.setStatementPath(statementPath);
 

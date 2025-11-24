@@ -22,6 +22,15 @@ public class HintService {
     private final ProblemRepository problemRepository;
     private final ProblemHintRepository problemHintRepository;
 
+    private int tierToMaxStage(String tier) {
+        return switch (tier) {
+            case "BRONZE" -> 3;
+            case "SILVER" -> 8;
+            case "GOLD" -> 13;
+            default -> 19; // PLATINUM
+        };
+    }
+
     @Transactional
     public ProblemHint addNextStageHint(Long problemId, String markdown) throws IOException {
 
@@ -49,7 +58,7 @@ public class HintService {
                 .version(null)
                 .source(null)
                 .reviewerId(null)
-                .waitSeconds(5)
+                .waitSeconds(1)
                 .isActive(true)
                 .createdAt(null)
                 .updatedAt(null)

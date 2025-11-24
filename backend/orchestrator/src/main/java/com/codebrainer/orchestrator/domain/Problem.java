@@ -18,11 +18,11 @@ import lombok.*;
 public class Problem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String title;
 
+    @Column(nullable = true)
     private String slug;
 
     private String tier;
@@ -38,9 +38,11 @@ public class Problem {
     @Column(name = "statement_path")
     private String statementPath;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private List<String> categories;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private List<String> languages;
 
@@ -53,7 +55,7 @@ public class Problem {
     @Column(name = "output_format", columnDefinition = "text")
     private String outputFormat;
 
-    private Boolean visibility;
+    private String visibility;
 
     private Integer version;
 

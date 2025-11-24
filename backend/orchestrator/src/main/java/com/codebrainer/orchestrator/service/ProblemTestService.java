@@ -70,16 +70,17 @@ public class ProblemTestService {
                 Path inFile = Path.of(
                         basePath,
                         "problems",
-                        problemId.toString(),
-                        "cases",
-                        String.valueOf(caseNo) + ".in"
+                        "problem-" + problemId,
+                        "tests",
+                        caseNo + ".in"
                 );
+
                 Path outFile = Path.of(
                         basePath,
                         "problems",
                         problemId.toString(),
-                        "cases",
-                        String.valueOf(caseNo) + ".out"
+                        "tests",
+                        caseNo + ".out"
                 );
 
                 Files.createDirectories(inFile.getParent());

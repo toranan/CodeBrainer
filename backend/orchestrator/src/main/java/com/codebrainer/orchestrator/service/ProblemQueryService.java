@@ -77,7 +77,7 @@ public class ProblemQueryService {
                 .toList();
         List<ProblemTestcaseResponse> testcaseDtos = testcaseEntities.stream()
                 .map(t -> new ProblemTestcaseResponse(
-                        t.getId(),
+                        t.getProblemId(),
                         t.getCaseNo(),
                         readFileSafely(t.getInputPath()),
                         readFileSafely(t.getOutputPath()),

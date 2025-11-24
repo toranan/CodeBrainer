@@ -1,19 +1,19 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/codebrainer}
-    username: ${SPRING_DATASOURCE_USERNAME:codebrainer}
-    password: ${SPRING_DATASOURCE_PASSWORD:codebrainer}
+    url: jdbc:postgresql://localhost:5432/codebrainer
+    username: codebrainer
+    password: codebrainer
   rabbitmq:
-    host: ${RABBITMQ_HOST:rabbitmq}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+    host: rabbitmq
+    port: 5672
+    username: guest
+    password: guest
   flyway:
     enabled: false
 
 storage:
-  base-path: ${STORAGE_BASE_PATH:/data/storage}
+  base-path: ./storage
 
 judge0:
-  api-url: ${JUDGE0_API_URL:http://judge0:2358}
+  api-url: http://54.252.182.149:2358
 

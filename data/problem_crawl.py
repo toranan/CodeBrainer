@@ -3,10 +3,8 @@ import os
 import json
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-
-# https://solved.ac/problems/level/19?sort=solved&direction=desc&page=1 레벨 1부터 19까지 돌린다.
-# a[href^="https://www.acmicpc.net/problem/"] 이걸로 링크 접근해서 하나씩 긁어오기
-# 한 레벨 당 20문제씩
+import time
+import random
 
 load_dotenv()
 API_HOST = os.getenv("API_HOST")
@@ -17,65 +15,146 @@ os.makedirs(STATEMENT_DIR, exist_ok=True)
 BASE_BOJ = "https://www.acmicpc.net/problem"
 BASE_SOLVED = "https://solved.ac/problems/level/{level}?sort=solved&direction=desc&page=1"
 
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    )
+}
+
+
+
 def save_statement(problem_id, text):
     path = f"{STATEMENT_DIR}/{problem_id}.json"
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump({"statement": text}, f, ensure_ascii=False)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"statement": text}, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"[파일 저장 오류] {problem_id}: {e}")
     return path
 
-base_url = "https://www.acmicpc.net/problem"
-url = base_url + "/{id}"
 
-def parse_boj_problem(problem_id):
+def convert_level_to_tier(level_num: int) -> str:
+    if 1 <= level_num <= 3:
+        return "BRONZE"
+    elif 4 <= level_num <= 8:
+        return "SILVER"
+    elif 9 <= level_num <= 13:
+        return "GOLD"
+    else:
+        return "PLATINUM"
+
+
+def parse_boj_problem(problem_id, tier):
     url = f"{BASE_BOJ}/{problem_id}"
-    res = requests.get(url)
+
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=10)
+    except Exception as e:
+        print(f"[BOJ 연결 오류] id={problem_id}, {e}")
+        return None
 
     if res.status_code != 200:
-        print(f"BOJ 요청 실패 id={problem_id}")
+        print(f"[BOJ 요청 실패] id={problem_id}, status={res.status_code}")
         return None
 
     html = res.content.decode("utf-8", errors="ignore")
     soup = BeautifulSoup(html, "html.parser")
+    print(html)
 
-    title = soup.select_one(".problem_title").get_text(strip=True)
-    id = problem_id
-    time = soup.select_one("#problem-info > tbody > tr > td:nth-child(1)").get_text(strip=True) 
-    time_ms = time if time else "제한 없음" # 만약 초 면 ms로 변환
-    mem = soup.select_one("#problem-info > tbody > tr > td:nth-child(2)").get_text(strip=True)
-    mem_mb = mem if mem else "제한 없음" # 단위 생각하기
-    lev = soup.select_one("body > div.wrapper > div.container.content > div.row > div:nth-child(3) > div > blockquote > span").get_text()
-    level = lev if lev else ""
-    txt = soup.select_one(".problem_description").get_text()
-    description = txt if txt else ""
-    inp = soup.select_one(".input").get_text() # 이거 예외처리, 입력예시랑 합치기
-    input_format = inp if inp else ""
-    output_format = soup.select_one(".output").get_text()
-    algorithm = soup.select_one("#problem_tags > ul").get_text() # 이것도 정해진 형식대로 저장
-    statement_path = save_statement(problem_id, description)
+    try:
+        title = soup.select_one("#problem_title").get_text(strip=True)
+    except:
+        print(f"[파싱 오류] 제목 없음 id={problem_id}")
+        return None
+
+    time_ms = None
+    try:
+        time = soup.select_one("#problem-info > tbody > tr > td:nth-child(1)").get_text(strip=True)
+        if "초" in time:
+            time_ms = int(float(time.replace("초", "").strip()) * 1000)
+        elif "ms" in time:
+            time_ms = int(float(time.replace("ms", "").strip()))
+    except:
+        time_ms = None
+
+    mem_mb = None
+    try:
+        mem = soup.select_one("#problem-info > tbody > tr > td:nth-child(2)").get_text(strip=True)
+        if "MB" in mem:
+            mem_mb = int(mem.replace("MB", "").strip())
+        elif "KB" in mem:
+            kb = int(mem.replace("KB", "").strip())
+            mem_mb = max(1, kb // 1024)
+    except:
+        mem_mb = None
+
+    description = ""
+    try:
+        description += soup.select_one(".problem_description").get_text("\n", strip=True)
+    except:
+        description = ""
+
+    description += "\n\n입력:\n"
+    try:
+        description += soup.select_one(".input").get_text("\n", strip=True)
+    except:
+        description += ""
+
+    description += "\n\n출력:\n"
+    try:
+        description += soup.select_one(".output").get_text("\n", strip=True)
+    except:
+        description += ""
+
+    try:
+        input_format = soup.select_one("#sample-input-1").get_text("\n", strip=True)
+    except:
+        input_format = ""
+
+    try:
+        output_format = soup.select_one("#sample-output-1").get_text("\n", strip=True)
+    except:
+        output_format = ""
+
+    categories = []
+    try:
+        tags_raw = soup.select_one("#problem_tags > ul")
+        if tags_raw:
+            categories = [t.strip() for t in tags_raw.get_text().split("\n") if t.strip()]
+    except:
+        categories = []
 
     return {
-        "id": int(id),
+        "id": int(problem_id),
         "title": title,
-        "tier": level,
-        "time_ms": time_ms,
-        "mem_mb": mem_mb,
-        "categories": algorithm,
-        "input_format": input_format,
-        "output_format": output_format,
-        "statement_path": statement_path,
+        "tier": tier,
+        "timeMs": time_ms,
+        "memMb": mem_mb,
+        "categories": categories,
+        "inputFormat": input_format,
+        "outputFormat": output_format,
+        "statement": description
     }
+
 
 def main():
     all_problems = []
 
-    for level in range(1, 20):  # 레벨 1~19
-        print(f"\n=== 레벨 {level} 문제 수집 중 ===")
+    for level in range(1, 20):
+        tier = convert_level_to_tier(level)
+        print(f"\n=== 레벨 {level} ({tier}) 문제 수집 중 ===")
 
         url = BASE_SOLVED.format(level=level)
-        res = requests.get(url)
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=10)
+        except Exception as e:
+            print(f"[solved.ac 연결 오류] level={level}, {e}")
+            continue
 
         if res.status_code != 200:
-            print(f"solved.ac 접근 실패 (level={level})")
+            print(f"[solved.ac 요청 실패] level={level}, status={res.status_code}")
             continue
 
         soup = BeautifulSoup(res.text, "html.parser")
@@ -87,43 +166,42 @@ def main():
                 pid = href.split("/")[-1]
                 if pid.isdigit():
                     problem_ids.append(pid)
-                    if len(problem_ids) == 20:
+                    if len(problem_ids) >= 20:
                         break
 
-        print(f"문제 {len(problem_ids)}개:", problem_ids)
+        print(f"문제 {len(problem_ids)}개 수집:", problem_ids)
+        problem_ids = list(dict.fromkeys(problem_ids))
 
         for pid in problem_ids:
             print(f"파싱 중… {pid}")
-            data = parse_boj_problem(pid)
+            data = parse_boj_problem(pid, tier)
+            time.sleep(random.uniform(0.3, 1.0))
+
             if data:
                 all_problems.append(data)
-                print(f"수집 완료: {pid}")
+                print(f"  → 완료")
+            else:
+                print(f"  → 실패")
 
     if all_problems:
-        try:
-            response = requests.post(f"{API_HOST}/api/problems/", json=all_problems, timeout=10)
-            if response.status_code == 201:
-                print(f"Save to DB, {all_problems}")
-            else:
-                print(f"API 에러 - 상태코드: {response.status_code}, 응답: {response.text}")
-        except requests.exceptions.ConnectionError:
-            print(f"연결 에러: Spring 서버가 실행 중인지 확인하세요 ({API_HOST})")
-        except requests.exceptions.Timeout:
-            print(f"타임아웃 에러")
-        except Exception as e:
-            print(f"예상치 못한 에러: {e}")
+        for data in all_problems:
+            try:
+                response = requests.post(f"{API_HOST}/internal/problems", json=data, timeout=10)
+
+                if response.status_code in (200, 201):
+                    print(f"[DB 저장 완료] id={data['id']}")
+                else:
+                    print(f"[API 오류] id={data['id']} status={response.status_code}, body={response.text}")
+
+            except requests.exceptions.ConnectionError:
+                print(f"[연결 실패] Spring 서버 확인 필요: {API_HOST}")
+                return
+            except requests.exceptions.Timeout:
+                print(f"[타임아웃] id={data['id']}")
+            except Exception as e:
+                print(f"[예상 밖 오류] id={data['id']}: {e}")
     else:
         print("저장할 문제 없음")
-
-
-    # 최종 결과 저장
-    with open("problems.json", "w", encoding="utf-8") as f:
-        json.dump(all_problems, f, ensure_ascii=False, indent=2)
-
-
-
-    print("\n=== 전체 작업 완료 ===")
-    print("problems.json 파일 생성됨")
 
 
 if __name__ == "__main__":

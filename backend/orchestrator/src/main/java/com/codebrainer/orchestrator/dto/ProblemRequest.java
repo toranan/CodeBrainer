@@ -19,6 +19,6 @@ public class ProblemRequest {
     private List<String> categories;
     private String inputFormat;
     private String outputFormat;
-    private String statementPath;
+    private String statement;
     private List<String> languages;
 }

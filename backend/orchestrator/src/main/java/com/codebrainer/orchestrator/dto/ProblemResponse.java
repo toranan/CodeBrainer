@@ -22,7 +22,7 @@ public class ProblemResponse {
     private String inputFormat;
     private String outputFormat;
     private String statementPath;
-    private Boolean visibility;
+    private String visibility;
     private Integer version;
     private List<ProblemHintDto> hints;
     private List<ProblemTestcaseResponse> testcases;
