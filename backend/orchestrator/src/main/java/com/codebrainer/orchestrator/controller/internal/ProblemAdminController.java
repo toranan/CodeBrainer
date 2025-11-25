@@ -49,7 +49,7 @@ public class ProblemAdminController {
         Problem problem = new Problem();
         problem.setId(request.getId());
         problem.setTitle(request.getTitle());
-        problem.setSlug("");
+        problem.setSlug(null);
         problem.setTier(request.getTier());
         problem.setLevel(0);
         problem.setTimeMs(request.getTimeMs());
@@ -58,6 +58,8 @@ public class ProblemAdminController {
         problem.setVersion(1);
         problem.setInputFormat(request.getInputFormat());
         problem.setOutputFormat(request.getOutputFormat());
+        problem.setConstraints(request.getConstraints());
+        problem.setCategories(request.getCategories());
 
         Problem saved = problemManagementService.createProblem(
                 problem,

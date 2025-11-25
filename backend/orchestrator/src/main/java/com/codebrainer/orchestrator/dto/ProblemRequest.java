@@ -20,5 +20,6 @@ public class ProblemRequest {
     private String inputFormat;
     private String outputFormat;
     private String statement;
+    private String constraints;
     private List<String> languages;
 }

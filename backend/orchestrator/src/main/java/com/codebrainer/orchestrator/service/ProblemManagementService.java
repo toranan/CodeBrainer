@@ -67,19 +67,29 @@ public class ProblemManagementService {
 
     @Transactional
     public Problem createProblem(Problem problem, String statement, List<String> categories) throws IOException {
+        if (problemRepository.existsById(problem.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Problem already exists");
+        }
         if (problem.getCreatedAt() == null) {
             problem.setCreatedAt(OffsetDateTime.now());
         }
+        
         problem.setUpdatedAt(null);
         problem.setCategories(categories == null ? List.of() : categories);
         problem.setLanguages(fixedLanguages());
-        problem.setConstraints(null);
+        problem.setInputFormat(problem.getInputFormat());
+        problem.setOutputFormat(problem.getOutputFormat());
+
 
         Problem saved = problemRepository.save(problem);
 
         String statementPath = buildStatementPath(problem.getId());
         storageClient.saveString(statementPath, statement);
         saved.setStatementPath(statementPath);
+
+        if (saved.getSlug() == null || saved.getSlug().isBlank()) {
+            saved.setSlug("problem-" + saved.getId());
+        }
 
         return problemRepository.save(saved);
     }
