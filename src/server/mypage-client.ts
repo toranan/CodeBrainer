@@ -78,18 +78,45 @@ export async function getCharts(params: { userId: string; days?: number }) {
 
 export async function getGrowthTrend(params: {
   userId: string;
+  category?: string;
   tier?: string;
   level?: number;
   days?: number;
 }) {
   const q = new URLSearchParams();
   q.set("userId", params.userId);
+  if (params.category) q.set("category", params.category);
   if (params.tier) q.set("tier", params.tier);
   if (params.level != null) q.set("level", String(params.level));
   if (params.days != null) q.set("days", String(params.days));
   return orchestratorFetch<{ points: Array<{ date: string; count: number }>; totalHints: number }>(
     `/api/me/growth?${q.toString()}`
   );
+}
+
+export interface HintUsageTrends {
+  categoryTrends: Array<{
+    category: string;
+    recentHints: number;
+    previousHints: number;
+  }>;
+  tierTrends: Array<{
+    tier: string;
+    recentHints: number;
+    previousHints: number;
+  }>;
+  levelTrends: Array<{
+    level: number;
+    recentHints: number;
+    previousHints: number;
+  }>;
+}
+
+export async function getHintUsageTrends(params: { userId: string; days?: number }) {
+  const q = new URLSearchParams();
+  q.set("userId", params.userId);
+  if (params.days != null) q.set("days", String(params.days));
+  return orchestratorFetch<HintUsageTrends>(`/api/me/hint-usage-trends?${q.toString()}`);
 }
 
 export interface WeakCategoryStats {

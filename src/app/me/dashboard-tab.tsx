@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import ActivityHeatmap from "./ActivityHeatmap";
 import AlgorithmStats from "./AlgorithmStats";
+import HintUsageTrends from "./HintUsageTrends";
 import AIRecommendations from "./AIRecommendations";
 import ProblemItem from "./ProblemItem";
 // import { GrowthGraph } from "./GrowthGraph"; // TODO: GrowthGraph 컴포넌트 생성 필요
@@ -14,6 +15,9 @@ interface DashboardTabProps {
   userInfo: any;
   overall: any;
   charts: any;
+  hintTrends: any;
+  hintDays: 7 | 30 | 90 | 365;
+  onChangeHintDays: (days: 7 | 30 | 90 | 365) => void;
   recentItems: any[];
   items: any[];
   list: any;
@@ -27,6 +31,9 @@ export function DashboardTab({
   userInfo,
   overall,
   charts,
+  hintTrends,
+  hintDays,
+  onChangeHintDays,
   recentItems,
   items,
   list,
@@ -90,6 +97,17 @@ export function DashboardTab({
       <section className="mb-8">
         <h2 className="mb-3 text-lg font-semibold">📈 알고리즘별 통계</h2>
         <AlgorithmStats data={charts} />
+      </section>
+
+      {/* 힌트 사용량 트렌드 */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-lg font-semibold">💡 힌트 사용량 변화</h2>
+        <HintUsageTrends
+          data={hintTrends}
+          days={hintDays}
+          onChangeDays={onChangeHintDays}
+          userId={userId}
+        />
       </section>
 
       {/* 성장 그래프 */}

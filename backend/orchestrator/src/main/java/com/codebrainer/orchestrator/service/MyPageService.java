@@ -1,9 +1,6 @@
 package com.codebrainer.orchestrator.service;
 
-import com.codebrainer.orchestrator.domain.Problem;
 import com.codebrainer.orchestrator.dto.*;
-import com.codebrainer.orchestrator.repository.ProblemRepository;
-import com.codebrainer.orchestrator.repository.SubmissionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -31,19 +28,13 @@ import java.util.stream.Collectors;
 public class MyPageService {
 
     private final EntityManager entityManager;
-    private final ProblemRepository problemRepository;
-    private final SubmissionRepository submissionRepository;
     private static final TypeReference<Map<String, Object>> SUMMARY_TYPE = new TypeReference<>() {};
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MyPageService(
-            EntityManager entityManager,
-            ProblemRepository problemRepository,
-            SubmissionRepository submissionRepository
+            EntityManager entityManager
     ) {
         this.entityManager = entityManager;
-        this.problemRepository = problemRepository;
-        this.submissionRepository = submissionRepository;
     }
 
     /**
@@ -305,16 +296,18 @@ public class MyPageService {
     }
 
     @Transactional(readOnly = true)
-    public GrowthTrendResponse getHintUsageGrowth(String userId, String tier, Integer level, int days) {
+    public GrowthTrendResponse getHintUsageGrowth(String userId, String category, String tier, Integer level, int days) {
         Query query = entityManager.createNativeQuery("""
                 SELECT TO_CHAR(s.created_at::date, 'YYYY-MM-DD') AS date, COALESCE(SUM(s.hint_usage_count), 0) AS total
                 FROM submissions s
                 JOIN problems p ON p.id = s.problem_id
+                LEFT JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(p.categories) AS cat(category) ON TRUE
                 WHERE s.user_id = :userId
                   AND s.status IN ('AC', 'COMPLETED')
                   AND s.created_at >= NOW() - (:days || ' days')::interval
                   AND (:tier IS NULL OR UPPER(p.tier) = UPPER(:tier))
                   AND (:level IS NULL OR p.level = :level)
+                  AND (:category IS NULL OR cat.category = :category)
                 GROUP BY date
                 ORDER BY date
                 """);
@@ -322,6 +315,7 @@ public class MyPageService {
         query.setParameter("days", days);
         query.setParameter("tier", tier != null && !tier.isBlank() ? tier : null);
         query.setParameter("level", level);
+        query.setParameter("category", category != null && !category.isBlank() ? category : null);
 
         @SuppressWarnings("unchecked")
         List<Object[]> results = query.getResultList();
@@ -330,6 +324,244 @@ public class MyPageService {
                 .toList();
         int totalHints = (int) points.stream().mapToLong(DailyCount::count).sum();
         return new GrowthTrendResponse(points, totalHints);
+    }
+
+    /**
+     * 카테고리 / 티어 / 난이도별 힌트 사용량 트렌드
+     * - 최근 days일 vs 그 이전 days일을 비교
+     */
+    @Transactional(readOnly = true)
+    public HintUsageTrendsResponse getHintUsageTrends(String userId, int days) {
+        // 실제 힌트 사용량이 있는 항목들(기존 로직)
+        List<HintUsageTrendsResponse.CategoryHintUsageTrend> categoryTrends =
+                new ArrayList<>(getCategoryHintUsageTrends(userId, days));
+        List<HintUsageTrendsResponse.TierHintUsageTrend> tierTrends =
+                new ArrayList<>(getTierHintUsageTrends(userId, days));
+        List<HintUsageTrendsResponse.LevelHintUsageTrend> levelTrends =
+                new ArrayList<>(getLevelHintUsageTrends(userId, days));
+
+        // --- 카테고리: 문제 메타데이터 기준 전체 카테고리를 0값이라도 포함 ---
+        List<String> allCategories = getAllCategoriesForUser(userId);
+        if (!allCategories.isEmpty()) {
+            Set<String> existingCategories = categoryTrends.stream()
+                    .map(HintUsageTrendsResponse.CategoryHintUsageTrend::category)
+                    .collect(Collectors.toSet());
+
+            for (String category : allCategories) {
+                if (!existingCategories.contains(category)) {
+                    categoryTrends.add(new HintUsageTrendsResponse.CategoryHintUsageTrend(
+                            category,
+                            0,
+                            0
+                    ));
+                }
+            }
+        }
+
+        // --- 티어: 사용자가 시도한 모든 티어를 0값이라도 포함 ---
+        List<String> allTiers = getAllTiersForUser(userId);
+        if (!allTiers.isEmpty()) {
+            Set<String> existingTiers = tierTrends.stream()
+                    .map(HintUsageTrendsResponse.TierHintUsageTrend::tier)
+                    .collect(Collectors.toSet());
+
+            for (String tier : allTiers) {
+                if (!existingTiers.contains(tier)) {
+                    tierTrends.add(new HintUsageTrendsResponse.TierHintUsageTrend(
+                            tier,
+                            0,
+                            0
+                    ));
+                }
+            }
+        }
+
+        // --- 난이도(Level): 사용자가 시도한 모든 레벨을 0값이라도 포함 ---
+        List<Integer> allLevels = getAllLevelsForUser(userId);
+        if (!allLevels.isEmpty()) {
+            Set<Integer> existingLevels = levelTrends.stream()
+                    .map(HintUsageTrendsResponse.LevelHintUsageTrend::level)
+                    .collect(Collectors.toSet());
+
+            for (Integer level : allLevels) {
+                if (!existingLevels.contains(level)) {
+                    levelTrends.add(new HintUsageTrendsResponse.LevelHintUsageTrend(
+                            level,
+                            0,
+                            0
+                    ));
+                }
+            }
+        }
+
+        return new HintUsageTrendsResponse(categoryTrends, tierTrends, levelTrends);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<HintUsageTrendsResponse.CategoryHintUsageTrend> getCategoryHintUsageTrends(String userId, int days) {
+        Query query = entityManager.createNativeQuery("""
+                SELECT 
+                    cat.category,
+                    COALESCE(SUM(CASE WHEN s.created_at >= NOW() - (:days || ' days')::interval THEN s.hint_usage_count END), 0) AS recent_hints,
+                    COALESCE(SUM(CASE WHEN s.created_at <  NOW() - (:days || ' days')::interval THEN s.hint_usage_count END), 0) AS previous_hints
+                FROM submissions s
+                JOIN problems p ON p.id = s.problem_id
+                CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(p.categories) AS cat(category)
+                WHERE s.user_id = :userId
+                  AND s.status IN ('AC', 'COMPLETED')
+                  AND s.hint_usage_count IS NOT NULL
+                  AND UPPER(p.visibility) = 'PUBLIC'
+                GROUP BY cat.category
+                HAVING COALESCE(SUM(s.hint_usage_count), 0) > 0
+                ORDER BY recent_hints DESC
+                """);
+        query.setParameter("userId", userId);
+        query.setParameter("days", days);
+
+        List<Object[]> results = query.getResultList();
+        return results.stream()
+                .map(row -> new HintUsageTrendsResponse.CategoryHintUsageTrend(
+                        (String) row[0],
+                        ((Number) row[1]).intValue(),
+                        ((Number) row[2]).intValue()
+                ))
+                .toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<HintUsageTrendsResponse.TierHintUsageTrend> getTierHintUsageTrends(String userId, int days) {
+        Query query = entityManager.createNativeQuery("""
+                SELECT 
+                    p.tier,
+                    COALESCE(SUM(CASE WHEN s.created_at >= NOW() - (:days || ' days')::interval THEN s.hint_usage_count END), 0) AS recent_hints,
+                    COALESCE(SUM(CASE WHEN s.created_at <  NOW() - (:days || ' days')::interval THEN s.hint_usage_count END), 0) AS previous_hints
+                FROM submissions s
+                JOIN problems p ON p.id = s.problem_id
+                WHERE s.user_id = :userId
+                  AND s.status IN ('AC', 'COMPLETED')
+                  AND s.hint_usage_count IS NOT NULL
+                  AND UPPER(p.visibility) = 'PUBLIC'
+                GROUP BY p.tier
+                HAVING COALESCE(SUM(s.hint_usage_count), 0) > 0
+                ORDER BY recent_hints DESC
+                """);
+        query.setParameter("userId", userId);
+        query.setParameter("days", days);
+
+        List<Object[]> results = query.getResultList();
+        return results.stream()
+                .map(row -> new HintUsageTrendsResponse.TierHintUsageTrend(
+                        (String) row[0],
+                        ((Number) row[1]).intValue(),
+                        ((Number) row[2]).intValue()
+                ))
+                .toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<HintUsageTrendsResponse.LevelHintUsageTrend> getLevelHintUsageTrends(String userId, int days) {
+        Query query = entityManager.createNativeQuery("""
+                SELECT 
+                    p.level,
+                    COALESCE(SUM(CASE WHEN s.created_at >= NOW() - (:days || ' days')::interval THEN s.hint_usage_count END), 0) AS recent_hints,
+                    COALESCE(SUM(CASE WHEN s.created_at <  NOW() - (:days || ' days')::interval THEN s.hint_usage_count END), 0) AS previous_hints
+                FROM submissions s
+                JOIN problems p ON p.id = s.problem_id
+                WHERE s.user_id = :userId
+                  AND s.status IN ('AC', 'COMPLETED')
+                  AND s.hint_usage_count IS NOT NULL
+                  AND UPPER(p.visibility) = 'PUBLIC'
+                GROUP BY p.level
+                HAVING COALESCE(SUM(s.hint_usage_count), 0) > 0
+                ORDER BY p.level
+                """);
+        query.setParameter("userId", userId);
+        query.setParameter("days", days);
+
+        List<Object[]> results = query.getResultList();
+        return results.stream()
+                .map(row -> new HintUsageTrendsResponse.LevelHintUsageTrend(
+                        ((Number) row[0]).intValue(),
+                        ((Number) row[1]).intValue(),
+                        ((Number) row[2]).intValue()
+                ))
+                .toList();
+    }
+
+    /**
+     * 사용자가 시도한 모든 문제에서 등장하는 카테고리 전체 목록
+     * - 힌트 사용 여부와 상관없이, 문제 메타데이터 기준으로만 수집
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> getAllCategoriesForUser(String userId) {
+        Query query = entityManager.createNativeQuery("""
+                SELECT DISTINCT cat.category
+                FROM (
+                    SELECT DISTINCT s.problem_id
+                    FROM submissions s
+                    WHERE s.user_id = :userId
+                      AND s.status IN ('AC', 'COMPLETED')
+                ) sp
+                JOIN problems p ON p.id = sp.problem_id
+                CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(p.categories) AS cat(category)
+                WHERE UPPER(p.visibility) = 'PUBLIC'
+                ORDER BY cat.category
+                """);
+        query.setParameter("userId", userId);
+
+        List<String> results = query.getResultList();
+        return results == null ? List.of() : results;
+    }
+
+    /**
+     * 사용자가 시도한 모든 문제의 티어 전체 목록
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> getAllTiersForUser(String userId) {
+        Query query = entityManager.createNativeQuery("""
+                SELECT DISTINCT p.tier
+                FROM (
+                    SELECT DISTINCT s.problem_id
+                    FROM submissions s
+                    WHERE s.user_id = :userId
+                      AND s.status IN ('AC', 'COMPLETED')
+                ) sp
+                JOIN problems p ON p.id = sp.problem_id
+                WHERE UPPER(p.visibility) = 'PUBLIC'
+                ORDER BY p.tier
+                """);
+        query.setParameter("userId", userId);
+
+        List<String> results = query.getResultList();
+        return results == null ? List.of() : results;
+    }
+
+    /**
+     * 사용자가 시도한 모든 문제의 난이도(level) 전체 목록
+     */
+    @SuppressWarnings("unchecked")
+    private List<Integer> getAllLevelsForUser(String userId) {
+        Query query = entityManager.createNativeQuery("""
+                SELECT DISTINCT p.level
+                FROM (
+                    SELECT DISTINCT s.problem_id
+                    FROM submissions s
+                    WHERE s.user_id = :userId
+                      AND s.status IN ('AC', 'COMPLETED')
+                ) sp
+                JOIN problems p ON p.id = sp.problem_id
+                WHERE UPPER(p.visibility) = 'PUBLIC'
+                ORDER BY p.level
+                """);
+        query.setParameter("userId", userId);
+
+        List<Number> results = query.getResultList();
+        if (results == null) {
+            return List.of();
+        }
+        return results.stream()
+                .map(Number::intValue)
+                .toList();
     }
 
     // === Helper Methods ===

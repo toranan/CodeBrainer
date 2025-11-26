@@ -4,6 +4,7 @@ import com.codebrainer.orchestrator.dto.AIRecommendationResponse;
 import com.codebrainer.orchestrator.dto.BulkReviewResponse;
 import com.codebrainer.orchestrator.dto.ChartsResponse;
 import com.codebrainer.orchestrator.dto.GrowthTrendResponse;
+import com.codebrainer.orchestrator.dto.HintUsageTrendsResponse;
 import com.codebrainer.orchestrator.dto.MySolvedItem;
 import com.codebrainer.orchestrator.dto.PageResponse;
 import com.codebrainer.orchestrator.dto.ReviewResponse;
@@ -145,11 +146,24 @@ public class MyPageController {
     @GetMapping("/growth")
     public ResponseEntity<GrowthTrendResponse> getGrowth(
             @RequestParam @NotBlank String userId,
+            @RequestParam(required = false) String category,
             @RequestParam(required = false) String tier,
             @RequestParam(required = false) Integer level,
             @RequestParam(required = false, defaultValue = "30") @Min(1) @Max(180) Integer days
     ) {
-        GrowthTrendResponse response = myPageService.getHintUsageGrowth(userId, tier, level, days);
+        GrowthTrendResponse response = myPageService.getHintUsageGrowth(userId, category, tier, level, days);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 카테고리 / 티어 / 난이도별 힌트 사용량 트렌드
+     */
+    @GetMapping("/hint-usage-trends")
+    public ResponseEntity<HintUsageTrendsResponse> getHintUsageTrends(
+            @RequestParam @NotBlank String userId,
+            @RequestParam(required = false, defaultValue = "30") @Min(1) @Max(180) Integer days
+    ) {
+        HintUsageTrendsResponse response = myPageService.getHintUsageTrends(userId, days);
         return ResponseEntity.ok(response);
     }
 

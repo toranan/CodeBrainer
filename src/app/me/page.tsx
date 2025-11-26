@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getCharts, getMyProblems } from "@/server/mypage-client";
+import { getCharts, getHintUsageTrends, getMyProblems } from "@/server/mypage-client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // 탭 컴포넌트들
@@ -25,6 +25,7 @@ export default function MyPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [page, setPage] = useState(0);
+  const [hintDays, setHintDays] = useState<7 | 30 | 90 | 365>(30);
   const size = 10;
 
   // 로그인 체크
@@ -63,6 +64,12 @@ export default function MyPage() {
     enabled: userId !== null,
   });
 
+  const { data: hintTrends } = useQuery({
+    queryKey: ["me/hint-usage-trends", userId, hintDays],
+    queryFn: () => getHintUsageTrends({ userId: userId!, days: hintDays }),
+    enabled: userId !== null,
+  });
+
   const items = list?.content ?? [];
   const overall = charts?.overall;
   const recentItems = items.slice(0, 3);
@@ -93,6 +100,9 @@ export default function MyPage() {
             userInfo={userInfo}
             overall={overall}
             charts={charts}
+            hintTrends={hintTrends}
+            hintDays={hintDays}
+            onChangeHintDays={setHintDays}
             recentItems={recentItems}
             items={items}
             list={list}
