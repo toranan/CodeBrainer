@@ -78,7 +78,7 @@ public class ProblemTestService {
                 Path outFile = Path.of(
                         basePath,
                         "problems",
-                        problemId.toString(),
+                        "problem-" + problemId,
                         "tests",
                         caseNo + ".out"
                 );

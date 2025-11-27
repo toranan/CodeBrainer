@@ -1,23 +1,24 @@
 import os
 import requests
 from dotenv import load_dotenv
-from langchain_community.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.chains import LLMChain
+from langchain_openai import ChatOpenAI
+from langchain.schema import SystemMessage, HumanMessage 
 
 load_dotenv()
 
-GET_API_URL = os.getenv("GET_API")  # 문제 하나 랜덤 또는 큐에서 가져오는 API
-POST_TEST_URL = os.getenv("POST_TEST_URL")  # /problems/{id}/tests/ai
-GPT_API_KEY = os.getenv("GPT_API")
+GET_API_URL = "http://localhost:8080/api/problems"
+POST_API_URL = "http://localhost:8080/testcase"
+GPT_API_KEY = os.getenv("GPT_API_KEY")
 
-def fetch_problem():
-    response = requests.get(GET_API_URL)
-    response.raise_for_status()
-    return response.json()
+def fetch_problem_list():
+    return requests.get(GET_API_URL).json()
 
+def fetch_problem_detail(problem_id):
+    return requests.get(f"http://orchestrator:8080/api/problems/{problem_id}").json()
 
-def generate_testcases(problem_id, title, description, tier, time_ms, mem_mb, categories):
+STORAGE_BASE_URL = os.getenv("STORAGE_BASE_URL")
+
+def generate_testcase(problem_id, detail):
     system_message = (
         "너는 알고리즘 문제를 보고 테스트케이스를 생성하는 전문 채점 시스템이야. "
         "출제자의 의도를 고려해 다양한 유형의 테스트케이스를 만들어야 해. "
@@ -31,81 +32,62 @@ def generate_testcases(problem_id, title, description, tier, time_ms, mem_mb, ca
         "- JSON 이외의 말은 절대 출력하지 말 것."
     )
 
-    user_message = (
-        "문제 ID: {problem_id}\n"
-        "제목: {title}\n"
-        "난이도: {tier}\n"
-        "시간 제한(ms): {time_ms}\n"
-        "메모리 제한(MB): {mem_mb}\n"
-        "알고리즘 분류: {categories}\n"
-        "문제 설명:\n{description}\n\n"
-        "위 정보를 기반으로 최대 50개의 테스트케이스 JSON 배열을 생성해줘."
-    )
+    user_message = f"""
+        문제 ID: {problem_id}
+        시간 제한(ms): {detail['time_ms']}
+        메모리 제한(MB): {detail['mem_mb']}
+        알고리즘 분류: {", ".join(detail['categories'])}
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_message),
-        ("user", user_message)
-    ])
+        ===== 문제 설명 =====
+        {detail['statement']}
 
-    llm = ChatOpenAI(
-        model_name="gpt-4o-mini",
-        openai_api_key=GPT_API_KEY,
-        temperature=0.2
-    )
+        ===== 입력 형식 =====
+        {detail['input_format']}
 
-    chain = LLMChain(llm=llm, prompt=prompt)
+        ===== 출력 형식 =====
+        {detail['output_format']}
 
-    response = chain.invoke({
-        "problem_id": problem_id,
-        "title": title,
-        "tier": tier,
-        "time_ms": time_ms,
-        "mem_mb": mem_mb,
-        "categories": ", ".join(categories),
-        "description": description
-    })
+        ===== 제약 조건 =====
+        {detail['constraints']}
+        """
+    
+    llm = ChatOpenAI(model_name="gpt-4o-mini", openai_api_key=GPT_API_KEY, temperature=0.3)
+    messages = [
+        SystemMessage(content=system_message),
+        HumanMessage(content=user_message)
+    ]
 
-    return response["text"]
+    response = llm(messages)
+    return response.content
 
-
-def upload_testcases(problem_id):
-    url = f"{POST_TEST_URL}/{problem_id}/ai"
-    response = requests.post(url)
+def upload_testcase(problem_id, testcase_text):
+    url = f"{POST_API_URL}/{problem_id}/tests/ai"
+    data = {
+        "content": testcase_text
+    }
+    response = requests.post(url, json=data)
     response.raise_for_status()
     return response.json()
 
 def run():
-    print("[+] 문제 데이터 가져오는 중…")
-    problem = fetch_problem()
+    problems = fetch_problem_list()
 
-    problem_id = problem["id"]
-    title = problem["title"]
-    description = problem["statement"]
-    tier = problem["tier"]
-    time_ms = problem["timeMs"]
-    mem_mb = problem["memMb"]
-    categories = problem["categories"]
+    print(f"[+] 총 {len(problems)}개의 문제 가져옴")
+    
+    for problem in problems:
+        problem_id = problem["id"]
+        detail = fetch_problem_detail(problem_id)
 
-    print(f"[+] 문제 ID: {problem_id}")
+        print(f"[+] 문제 ID 받음: {problem_id}")
 
-    print("[+] 테스트케이스 생성 중…")
-    testcase_json = generate_testcases(
-        problem_id, title, description,
-        tier, time_ms, mem_mb, categories
-    )
+        testcase = generate_testcase(problem_id, detail)
 
-    print("[+] 테스트케이스 생성 완료")
-
-    temp_path = f"data/ai_testcase_{problem_id}.json"
-    with open(temp_path, "w", encoding="utf-8") as f:
-        f.write(testcase_json)
-
-    print(f"[+] JSON 저장 완료 → {temp_path}")
-
-    print("[+] Spring에 테스트케이스 생성 요청 전송 중…")
-    result = upload_testcases(problem_id)
-
-    print(f"[OK] 테스트케이스 저장 완료 → 총 {len(result)}개 저장됨")
+        # print("[+] 테스트케이스 생성 완료")
+        # print("===== 생성된 테스트케이스 =====")
+        # print(f"tier: {tier}, stage: {stage}\ntestcase: {testcase}")
+        # print("======================")
+        result = upload_testcase(problem_id, testcase)
+        print(f"[OK] 테스트케이스 저장 완료 → {result}")
 
 
 if __name__ == "__main__":
