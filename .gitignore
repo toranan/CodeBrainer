@@ -26,7 +26,8 @@
 
 # build artifacts
 /backend/extracted/
-backend/app.jar
+backend/*.jar
+backend/*.zip
 
 # debug
 npm-debug.log*
