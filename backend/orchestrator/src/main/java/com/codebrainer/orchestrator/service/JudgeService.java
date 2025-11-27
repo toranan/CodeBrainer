@@ -100,7 +100,10 @@ public class JudgeService {
                 String output = new String(storageClient.read(test.getOutputPath()));
                 log.debug("테스트케이스 {}: inputPath={}, outputPath={}", 
                     test.getId(), test.getInputPath(), test.getOutputPath());
-                
+
+                // 출력 정규화 (끝 공백/줄바꿈 제거)
+                output = output.trim();
+
                 // Base64 인코딩
                 String encodedSourceCode = Base64.getEncoder().encodeToString(sourceCode.getBytes());
                 String encodedInput = Base64.getEncoder().encodeToString(input.getBytes());

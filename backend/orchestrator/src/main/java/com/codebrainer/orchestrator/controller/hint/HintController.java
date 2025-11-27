@@ -1,7 +1,9 @@
 package com.codebrainer.orchestrator.controller.hint;
 
 import lombok.*;
+import java.util.Map;
 import com.codebrainer.orchestrator.dto.HintRequest;
+import com.codebrainer.orchestrator.dto.HintResponse;
 import com.codebrainer.orchestrator.service.HintService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,8 +23,17 @@ public class HintController {
     ) throws IOException {
         String markdown = req.getContent();
 
-        hintService.addNextStageHint(problemId, markdown);
+        HintResponse response = hintService.addNextStageHint(problemId, req.getContent());
 
-        return ResponseEntity.ok("OK");
+        return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/{problemId}/stage")
+    public ResponseEntity<?> getStage(@PathVariable Long problemId) {
+
+        int stage = hintService.getNextStage(problemId);
+
+        return ResponseEntity.ok(Map.of("stage", stage));
+    }
+
 }

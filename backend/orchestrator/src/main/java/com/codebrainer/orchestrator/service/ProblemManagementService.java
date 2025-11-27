@@ -1,5 +1,8 @@
 package com.codebrainer.orchestrator.service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.codebrainer.orchestrator.domain.Problem;
 import com.codebrainer.orchestrator.domain.ProblemHint;
 import com.codebrainer.orchestrator.domain.ProblemTest;

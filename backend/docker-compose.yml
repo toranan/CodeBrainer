@@ -15,6 +15,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: qpwoe1234
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: true
+      STORAGE_BASE_URL: http://orchestrator:8080/storage
       STORAGE_BASE_PATH: /data/storage
       JUDGE0_API_URL: http://judge0:2358
       # JUDGE0_API_URL: http://localhost:2358
@@ -29,6 +30,7 @@ services:
       - orchestrator-storage:/data/storage
     ports:
       - "8080:8080"
+    env_file: ../.env
 
   postgres:
     image: postgres:16

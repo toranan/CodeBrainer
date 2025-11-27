@@ -7,13 +7,13 @@ import time
 import random
 
 load_dotenv()
-API_HOST = os.getenv("API_HOST")
+API_HOST="http://orchestrator:8080"
 
 STATEMENT_DIR = os.getenv("STATEMENT_PATH", "./statements")
 os.makedirs(STATEMENT_DIR, exist_ok=True)
 
 BASE_BOJ = "https://www.acmicpc.net/problem"
-BASE_SOLVED = "https://solved.ac/problems/level/{level}?sort=solved&direction=desc&page=1"
+BASE_SOLVED = "https://solved.ac/problems/level/{level}?sort=solved&direction=desc&page={page}"
 
 HEADERS = {
     "User-Agent": (
@@ -23,6 +23,13 @@ HEADERS = {
     )
 }
 
+def join_examples(samples):
+    inputs = []
+    outputs = []
+    for i, s in enumerate(samples, start=1):
+        inputs.append(f"[예제 입력 {i}]\n{s['input']}")
+        outputs.append(f"[예제 출력 {i}]\n{s['output']}")
+    return "\n\n".join(inputs), "\n\n".join(outputs)
 
 
 def save_statement(problem_id, text):
@@ -61,7 +68,7 @@ def parse_boj_problem(problem_id, tier):
 
     html = res.content.decode("utf-8", errors="ignore")
     soup = BeautifulSoup(html, "html.parser")
-    print(html)
+    # print(html)
 
     try:
         title = soup.select_one("#problem_title").get_text(strip=True)
@@ -90,42 +97,72 @@ def parse_boj_problem(problem_id, tier):
     except:
         mem_mb = None
 
-    description = ""
     try:
-        description += soup.select_one(".problem_description").get_text("\n", strip=True)
+        description = soup.select_one("#problem_description").get_text("\n", strip=True)
     except:
         description = ""
 
     description += "\n\n입력:\n"
     try:
-        description += soup.select_one(".input").get_text("\n", strip=True)
+        description += soup.select_one("#problem_input").get_text("\n", strip=True)
     except:
         description += ""
 
     description += "\n\n출력:\n"
     try:
-        description += soup.select_one(".output").get_text("\n", strip=True)
+        description += soup.select_one("#problem_output").get_text("\n", strip=True)
     except:
         description += ""
 
-    try:
-        input_format = soup.select_one("#sample-input-1").get_text("\n", strip=True)
-    except:
-        input_format = ""
+    inputs = []
+    outputs = []
+    i = 1
+    while True:
+        si = soup.select_one(f"#sample-input-{i}")
+        so = soup.select_one(f"#sample-output-{i}")
+        if not si or not so:
+            break
 
-    try:
-        output_format = soup.select_one("#sample-output-1").get_text("\n", strip=True)
-    except:
-        output_format = ""
+        raw_in = si.get_text("\n", strip=True)
+        raw_out = so.get_text("\n", strip=True)
+
+        inputs.append(f"[예제 입력 {i}]\n{raw_in}")
+        outputs.append(f"[예제 출력 {i}]\n{raw_out}")
+        i += 1
+
+    input_format = "\n\n".join(inputs) if inputs else ""
+    output_format = "\n\n".join(outputs) if outputs else ""
 
     categories = []
     try:
-        tags_raw = soup.select_one("#problem_tags > ul")
-        if tags_raw:
-            categories = [t.strip() for t in tags_raw.get_text().split("\n") if t.strip()]
+        solved_res = requests.get(f"https://solved.ac/api/v3/problem/show?problemId={problem_id}")
+        if solved_res.status_code == 200:
+            tag_data = solved_res.json().get("tags", [])
+            for t in tag_data:
+                for dn in t.get("displayNames", []):
+                    if dn.get("language") == "ko":
+                        categories.append(dn.get("name"))
     except:
         categories = []
 
+    constraints = ""
+    try:
+        limit_section = soup.select_one("#problem_limit")
+        if limit_section:
+            constraints = limit_section.get_text("\n", strip=True)
+    except Exception:
+        constraints = ""
+
+    if not constraints:
+        lines = description.split("\n")
+        picked = [
+            ln for ln in lines
+            if any(x in ln for x in ["≤", ">=", "<=", "범위", "제한", "조건"])
+        ]
+        constraints = "\n".join(picked)
+
+    print(f"constraints = {constraints}")
+    print(f"알고리즘: {categories}")
     return {
         "id": int(problem_id),
         "title": title,
@@ -135,7 +172,8 @@ def parse_boj_problem(problem_id, tier):
         "categories": categories,
         "inputFormat": input_format,
         "outputFormat": output_format,
-        "statement": description
+        "statement": description,
+        "constraints": constraints
     }
 
 
@@ -146,47 +184,65 @@ def main():
         tier = convert_level_to_tier(level)
         print(f"\n=== 레벨 {level} ({tier}) 문제 수집 중 ===")
 
-        url = BASE_SOLVED.format(level=level)
-        try:
-            res = requests.get(url, headers=HEADERS, timeout=10)
-        except Exception as e:
-            print(f"[solved.ac 연결 오류] level={level}, {e}")
-            continue
-
-        if res.status_code != 200:
-            print(f"[solved.ac 요청 실패] level={level}, status={res.status_code}")
-            continue
-
-        soup = BeautifulSoup(res.text, "html.parser")
-
         problem_ids = []
-        for a in soup.find_all("a"):
-            href = a.get("href", "")
-            if "acmicpc.net/problem/" in href:
-                pid = href.split("/")[-1]
-                if pid.isdigit():
+        page = 1
+
+        while len(problem_ids) < 101:
+
+            url = BASE_SOLVED.format(level=level, page=page)
+            print(f" → 페이지 {page} 가져오는 중…")
+
+            try:
+                res = requests.get(url, headers=HEADERS, timeout=10)
+            except Exception as e:
+                print(f"[solved.ac 연결 오류] level={level}, page={page}, {e}")
+                continue
+
+            if res.status_code != 200:
+                print(f"[solved.ac 요청 실패] level={level}, status={res.status_code}")
+                continue
+
+            soup = BeautifulSoup(res.text, "html.parser")
+            found_this_page = []
+            for a in soup.find_all("a"):
+                href = a.get("href", "")
+                if "acmicpc.net/problem/" in href:
+                    pid = href.split("/")[-1]
+                    if pid.isdigit():
+                        found_this_page.append(pid)
+            if not found_this_page:
+                print(f" → 페이지 {page}에 더 이상 문제 없음 → 중단")
+                break
+            for pid in found_this_page:
+                if pid not in problem_ids:
                     problem_ids.append(pid)
-                    if len(problem_ids) >= 20:
-                        break
+                if len(problem_ids) >= 101:
+                    break
 
-        print(f"문제 {len(problem_ids)}개 수집:", problem_ids)
-        problem_ids = list(dict.fromkeys(problem_ids))
+            page += 1
 
-        for pid in problem_ids:
-            print(f"파싱 중… {pid}")
-            data = parse_boj_problem(pid, tier)
-            time.sleep(random.uniform(0.3, 1.0))
+            print(f"문제 {len(problem_ids)}개 수집:", problem_ids)
+            problem_ids = list(dict.fromkeys(problem_ids))
 
-            if data:
-                all_problems.append(data)
-                print(f"  → 완료")
-            else:
-                print(f"  → 실패")
+            for pid in problem_ids:
+                print(f"파싱 중… {pid}")
+                data = parse_boj_problem(pid, tier)
+                time.sleep(random.uniform(0.3, 1.0))
+
+                if data:
+                    all_problems.append(data)
+                    print(f"  → 완료")
+                else:
+                    print(f"  → 실패")
 
     if all_problems:
         for data in all_problems:
             try:
                 response = requests.post(f"{API_HOST}/internal/problems", json=data, timeout=10)
+
+                if response.status_code == 409:
+                    print(f"[SKIP] id={data['id']} 이미 존재하여 건너뜀")
+                    continue
 
                 if response.status_code in (200, 201):
                     print(f"[DB 저장 완료] id={data['id']}")
