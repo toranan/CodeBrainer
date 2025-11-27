@@ -14,7 +14,9 @@ def fetch_problem_list():
     return requests.get(GET_API_URL).json()
 
 def fetch_problem_detail(problem_id):
-    return requests.get(f"http://orchestrator:8080/api/problems/{problem_id}").json()
+    resp = requests.get(f"{GET_API_URL}/{problem_id}")
+    resp.raise_for_status()
+    return resp.json()
 
 def fetch_stage(problem_id):
     return requests.get(f"{POST_API_URL}/{problem_id}/stage").json()["stage"]
@@ -75,13 +77,20 @@ def generate_hint(problem_id, tier, stage, time_ms, mem_mb, categories,
     return response.content
 
 def upload_hint(problem_id, hint_text):
-    url = f"{POST_API_URL}/{problem_id}"
+    url = f"{POST_API_URL}/{problem_id}/tests/ai"
     data = {
         "content": hint_text
     }
-    response = requests.post(url, json=data)
-    response.raise_for_status()
-    return response.json()
+    try: 
+        response = requests.post(url, json=data)
+        if response.status_code == 500:
+            print(f"[SKIP] 문제 {problem_id}: 서버에서 힌트 저장 불가(이미 존재함?) → 건너뜀")
+            return None
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as e:
+        print(f"[SKIP] 문제 {problem_id}: 업로드 실패({e}) → 건너뜀")
+        return None
 
 def run():
     problems = fetch_problem_list()
@@ -92,6 +101,11 @@ def run():
         problem_id = problem["id"]
 
         detail = fetch_problem_detail(problem_id)
+        existing_hints = detail.get("hints", [])
+
+        if len(existing_hints) > 0:
+            print(f"[SKIP] 문제 {problem_id}: 이미 {len(existing_hints)}개 힌트 존재 → 건너뜀")
+            continue
 
         tier = detail["tier"]
         stage = fetch_stage(problem_id)

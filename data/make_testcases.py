@@ -14,8 +14,10 @@ def fetch_problem_list():
     return requests.get(GET_API_URL).json()
 
 def fetch_problem_detail(problem_id):
-    return requests.get(f"http://orchestrator:8080/api/problems/{problem_id}").json()
-
+    resp = requests.get(f"{GET_API_URL}/{problem_id}")
+    resp.raise_for_status()
+    return resp.json()
+    
 STORAGE_BASE_URL = os.getenv("STORAGE_BASE_URL")
 
 def generate_testcase(problem_id, detail):
@@ -61,7 +63,7 @@ def generate_testcase(problem_id, detail):
     return response.content
 
 def upload_testcase(problem_id, testcase_text):
-    url = f"{POST_API_URL}/{problem_id}/tests/ai"
+    url = f"{POST_API_URL}/{problem_id}"
     data = {
         "content": testcase_text
     }
@@ -77,6 +79,11 @@ def run():
     for problem in problems:
         problem_id = problem["id"]
         detail = fetch_problem_detail(problem_id)
+        existing_testcases = detail.get("hints", [])
+
+        if len(existing_testcases) > 0:
+            print(f"[SKIP] 문제 {problem_id}: 이미 {len(existing_testcases)}개 테스트케이스 존재 → 건너뜀")
+            continue
 
         print(f"[+] 문제 ID 받음: {problem_id}")
 
