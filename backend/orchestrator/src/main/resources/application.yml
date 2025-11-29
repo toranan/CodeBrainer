@@ -27,7 +27,12 @@ management:
         include: health,info
 
 storage:
+  type: ${STORAGE_TYPE:local}  # local or supabase
   base-path: ./storage
+  supabase:
+    url: ${SUPABASE_URL:}
+    key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    bucket: ${SUPABASE_BUCKET:codebrainer-problems}
 
 judge0:
   api-url: http://54.252.182.149:2358

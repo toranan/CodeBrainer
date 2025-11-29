@@ -14,6 +14,9 @@ WORKDIR /app
 
 COPY --from=build /app/target/orchestrator-0.0.1-SNAPSHOT.jar app.jar
 
+# 문제 파일 복사 (배포 시 필요)
+COPY storage /data/storage
+
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -99,7 +99,7 @@ public class ProblemQueryService {
                 problem.getLevel(),
                 problem.getCategories(),
                 problem.getLanguages(),
-                readFileSafely(problem.getStatementPath()),
+                "", // Don't load statement for summary - it's too slow
                 problem.getCreatedAt(),
                 problem.getUpdatedAt()
         );

@@ -48,6 +48,16 @@ public class LocalStorageClient implements StorageClient {
                     });
         }
     }
+    
+    @Override
+    public boolean exists(String path) {
+        try {
+            Path target = resolve(path);
+            return Files.exists(target);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     private Path resolve(String path) {
         Path resolved = basePath.resolve(path).normalize();

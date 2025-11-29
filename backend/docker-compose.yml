@@ -13,17 +13,24 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
       SPRING_DATASOURCE_USERNAME: postgres.sqwobsmtrgjuhgymfwtl
       SPRING_DATASOURCE_PASSWORD: qpwoe1234
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
       STORAGE_BASE_PATH: /data/storage
-      JUDGE0_API_URL: http://15.134.206.28:2358
+      STORAGE_TYPE: supabase
+      SUPABASE_URL: https://sqwobsmtrgjuhgymfwtl.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd29ic210cmdqdWhneW1md3RsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjY3Nzk4OCwiZXhwIjoyMDc4MjUzOTg4fQ.OKVm1qdziTvtTvSi3zxwAaVYfecsnZUUUIKFjSq-zU4
+      SUPABASE_BUCKET: codebrainer-problems
+      JUDGE0_API_URL: http://15.134.39.187:2358
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: guest
       RABBITMQ_PASSWORD: guest
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-pro}
-      GEMINI_ENABLED: ${GEMINI_ENABLED:-true}
+      GEMINI_MODEL: gemini-1.5-pro
+      GEMINI_ENABLED: true
+    env_file:
+      - .env
     volumes:
       - ./orchestrator/storage:/data/storage
     ports:
@@ -41,7 +48,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U codebrainer -d codebrainer"]
+      test: [ "CMD-SHELL", "pg_isready -U codebrainer -d codebrainer" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -52,7 +59,7 @@ services:
     ports:
       - "15672:15672"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      test: [ "CMD", "rabbitmq-diagnostics", "status" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -83,7 +90,7 @@ services:
     image: judge0/judge0:1.13.1
     restart: unless-stopped
     privileged: true
-    command: ["./scripts/workers"]
+    command: [ "./scripts/workers" ]
     environment:
       REDIS_HOST: redis
       REDIS_PORT: "6379"

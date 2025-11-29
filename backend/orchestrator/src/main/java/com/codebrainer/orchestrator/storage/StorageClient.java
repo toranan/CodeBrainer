@@ -11,6 +11,8 @@ public interface StorageClient {
     void delete(String path) throws IOException;
 
     void deleteDirectory(String path) throws IOException;
+    
+    boolean exists(String path);
 
     default void saveString(String path, String content) throws IOException {
         save(path, content.getBytes());
