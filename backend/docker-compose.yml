@@ -25,9 +25,11 @@ services:
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: guest
       RABBITMQ_PASSWORD: guest
-      GEMINI_API_KEY: AIzaSyCSJZ4_fn2qqIbEewSvR2tl18SqKKkpfYM
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_MODEL: gemini-1.5-pro
       GEMINI_ENABLED: true
+    env_file:
+      - backend/.env
     volumes:
       - ./orchestrator/storage:/data/storage
     ports:
