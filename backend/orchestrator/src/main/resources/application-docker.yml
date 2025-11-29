@@ -3,6 +3,12 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/codebrainer}
     username: ${SPRING_DATASOURCE_USERNAME:codebrainer}
     password: ${SPRING_DATASOURCE_PASSWORD:codebrainer}
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
   rabbitmq:
     host: ${RABBITMQ_HOST:rabbitmq}
     port: ${RABBITMQ_PORT:5672}
@@ -12,7 +18,12 @@ spring:
     enabled: false
 
 storage:
+  type: ${STORAGE_TYPE:local}  # local or supabase
   base-path: ${STORAGE_BASE_PATH:/data/storage}
+  supabase:
+    url: ${SUPABASE_URL:}
+    key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    bucket: ${SUPABASE_BUCKET:codebrainer-problems}
 
 judge0:
   api-url: ${JUDGE0_API_URL:http://judge0:2358}
