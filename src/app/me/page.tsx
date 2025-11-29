@@ -25,6 +25,7 @@ export default function MyPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [page, setPage] = useState(0);
+  const [recentPage, setRecentPage] = useState(0);
   const [hintDays, setHintDays] = useState<7 | 30 | 90 | 365>(30);
   const size = 10;
 
@@ -46,8 +47,8 @@ export default function MyPage() {
   }, [router]);
 
   const { data: list } = useQuery({
-    queryKey: ["me/problems", userId, page, size],
-    queryFn: () => getMyProblems({ userId: userId!, status: "AC", page, size }),
+    queryKey: ["me/problems", userId, recentPage, size],
+    queryFn: () => getMyProblems({ userId: userId!, status: "AC", page: recentPage, size }),
     enabled: userId !== null,
   });
 
@@ -72,7 +73,6 @@ export default function MyPage() {
 
   const items = list?.content ?? [];
   const overall = charts?.overall;
-  const recentItems = items.slice(0, 3);
 
   // 로그인 확인 중
   if (userId === null) {
@@ -103,12 +103,13 @@ export default function MyPage() {
             hintTrends={hintTrends}
             hintDays={hintDays}
             onChangeHintDays={setHintDays}
-            recentItems={recentItems}
             items={items}
             list={list}
             attemptedList={attemptedList}
             page={page}
             setPage={setPage}
+            recentPage={recentPage}
+            setRecentPage={setRecentPage}
             userId={userId}
           />
         </TabsContent>

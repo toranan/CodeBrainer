@@ -18,12 +18,13 @@ interface DashboardTabProps {
   hintTrends: any;
   hintDays: 7 | 30 | 90 | 365;
   onChangeHintDays: (days: 7 | 30 | 90 | 365) => void;
-  recentItems: any[];
   items: any[];
   list: any;
   attemptedList?: any;
   page: number;
   setPage: (page: number) => void;
+  recentPage: number;
+  setRecentPage: (page: number) => void;
   userId: string;
 }
 
@@ -34,12 +35,13 @@ export function DashboardTab({
   hintTrends,
   hintDays,
   onChangeHintDays,
-  recentItems,
   items,
   list,
   attemptedList,
   page,
   setPage,
+  recentPage,
+  setRecentPage,
   userId,
 }: DashboardTabProps) {
   return (
@@ -121,12 +123,19 @@ export function DashboardTab({
 
       {/* 최근 해결한 문제 */}
       <section className="mb-8">
-        <h2 className="mb-3 text-lg font-semibold">✅ 최근 해결한 문제</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">✅ 최근 해결한 문제</h2>
+          {list && list.totalPages > 1 && (
+            <div className="text-sm text-muted-foreground">
+              총 {list.totalPages} 페이지
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 gap-4">
-          {recentItems.map((item, idx) => (
+          {items.map((item, idx) => (
             <ProblemItem key={idx} item={item} userId={userId} />
           ))}
-          {recentItems.length === 0 && (
+          {items.length === 0 && (
             <Card>
               <CardContent className="py-8 text-center text-sm text-muted-foreground">
                 아직 푼 문제가 없어요.
@@ -134,6 +143,27 @@ export function DashboardTab({
             </Card>
           )}
         </div>
+        {list && list.totalPages > 1 && (
+          <div className="mt-4 flex justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setRecentPage(Math.max(0, recentPage - 1))}
+              disabled={recentPage === 0}
+            >
+              이전
+            </Button>
+            <span className="flex items-center px-4 text-sm">
+              {recentPage + 1} / {list.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              onClick={() => setRecentPage(Math.min(list.totalPages - 1, recentPage + 1))}
+              disabled={recentPage >= list.totalPages - 1}
+            >
+              다음
+            </Button>
+          </div>
+        )}
       </section>
 
       <Separator className="my-8" />
