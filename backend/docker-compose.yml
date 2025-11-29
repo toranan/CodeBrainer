@@ -29,7 +29,7 @@ services:
       GEMINI_MODEL: gemini-1.5-pro
       GEMINI_ENABLED: true
     env_file:
-      - backend/.env
+      - .env
     volumes:
       - ./orchestrator/storage:/data/storage
     ports:
