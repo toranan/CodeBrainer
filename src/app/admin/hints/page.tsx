@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+export const dynamic = 'force-dynamic';
+
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +39,7 @@ interface Hint {
   wait_seconds: number;
 }
 
-export default function AdminHints() {
+function AdminHintsContent() {
   const searchParams = useSearchParams();
   const initialProblemId = searchParams.get("problemId");
 
@@ -451,5 +453,13 @@ export default function AdminHints() {
         </Card>
       )}
     </div>
+  );
+}
+
+export default function AdminHints() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-slate-500">로딩 중...</p></div>}>
+      <AdminHintsContent />
+    </Suspense>
   );
 }
