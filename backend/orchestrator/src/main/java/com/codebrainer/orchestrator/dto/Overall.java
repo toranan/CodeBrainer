@@ -6,7 +6,9 @@ package com.codebrainer.orchestrator.dto;
 public record Overall(
         Long attemptedProblems,
         Long solvedProblems,
-        Double acRate
+        Double acRate,
+        Long solvedLast7Days,
+        Long solvedLast30Days
 ) {
 }
 

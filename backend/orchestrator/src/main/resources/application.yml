@@ -38,10 +38,15 @@ management:
         include: health,info
 
 storage:
+  type: ${STORAGE_TYPE:local}  # local or supabase
   base-path: ./storage
+  supabase:
+    url: ${SUPABASE_URL:}
+    key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    bucket: ${SUPABASE_BUCKET:codebrainer-problems}
 
 judge0:
-  api-url: http://3.27.95.194:2358
+  api-url: http://54.252.182.149:2358
   callback-url: http://localhost:8080/internal/judge0/callback
   callback-enabled: false
 
@@ -60,4 +65,9 @@ logging:
   level:
     org.springframework.web.client: DEBUG
     org.apache.http: DEBUG
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-1.5-pro}
+  enabled: ${GEMINI_ENABLED:false}
 

@@ -27,9 +27,12 @@ export function ProblemHoverMenu() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <span className="hover:text-primary cursor-pointer text-sm font-medium text-muted-foreground">
+      <Link
+        href="/problems"
+        className="hover:text-primary cursor-pointer text-sm font-medium text-muted-foreground"
+      >
         문제 목록
-      </span>
+      </Link>
 
       {isOpen && (
         <div
@@ -40,7 +43,7 @@ export function ProblemHoverMenu() {
           {/* 투명한 연결 영역 */}
           <div className="h-2 w-full bg-transparent"></div>
           {/* 실제 드롭다운 메뉴 */}
-          <div className="rounded-md border border-slate-200 bg-white shadow-lg">
+          <div className="rounded-md border border-slate-200 bg-white shadow-lg relative z-[9999]">
             <div className="py-1">
               <Link
                 href="/problems"

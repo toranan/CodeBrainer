@@ -1,19 +1,41 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/codebrainer}
-    username: ${SPRING_DATASOURCE_USERNAME:codebrainer}
-    password: ${SPRING_DATASOURCE_PASSWORD:codebrainer}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?prepareThreshold=0}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres.sqwobsmtrgjuhgymfwtl}
+    password: ${SPRING_DATASOURCE_PASSWORD:qpwoe1234}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 1
+      minimum-idle: 0
+      max-lifetime: 10000
+      connection-timeout: 10000
+      idle-timeout: 5000
+      leak-detection-threshold: 60000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   rabbitmq:
     host: ${RABBITMQ_HOST:rabbitmq}
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
   flyway:
-    enabled: false
+    enabled: ${SPRING_FLYWAY_ENABLED:false}
+    baseline-on-migrate: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:true}
 
 storage:
+  type: ${STORAGE_TYPE:local}  # local or supabase
   base-path: ${STORAGE_BASE_PATH:/data/storage}
+  supabase:
+    url: ${SUPABASE_URL:}
+    key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    bucket: ${SUPABASE_BUCKET:codebrainer-problems}
 
 judge0:
-  api-url: ${JUDGE0_API_URL:http://judge0:2358}
+  api-url: ${JUDGE0_API_URL:http://3.26.24.236:2358}
 

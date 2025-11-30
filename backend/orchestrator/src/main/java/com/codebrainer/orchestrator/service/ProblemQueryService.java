@@ -42,45 +42,52 @@ public class ProblemQueryService {
 
     public Optional<ProblemDetailResponse> fetchDetailBySlug(String slug) {
         return problemRepository.findBySlug(slug)
-                .map(problem -> {
-                    List<ProblemTestcaseResponse> allTestcases = problemTestRepository.findAllByProblemOrderByCaseNo(problem)
-                            .stream()
-                            .map(test -> toTestcase(test, true))
-                            .toList();
+                .map(this::buildDetailResponse);
+    }
 
-                    List<ProblemTestcaseResponse> samples = allTestcases.stream()
-                            .filter(tc -> Boolean.FALSE.equals(tc.hidden()))
-                            .toList();
+    public Optional<ProblemDetailResponse> fetchDetailById(Long id) {
+        return problemRepository.findById(id)
+                .map(this::buildDetailResponse);
+    }
 
-                    List<ProblemHintDto> hints = problemHintRepository.findAllByProblemOrderByStageAsc(problem)
-                            .stream()
-                            .map(hint -> new ProblemHintDto(
-                                    hint.getStage(),
-                                    hint.getTitle(),
-                                    hint.getContentMarkdown(),
-                                    hint.getWaitSeconds()
-                            ))
-                            .toList();
+    private ProblemDetailResponse buildDetailResponse(Problem problem) {
+        List<ProblemTestcaseResponse> allTestcases = problemTestRepository.findAllByProblemOrderByCaseNo(problem)
+                .stream()
+                .map(test -> toTestcase(test, true))
+                .toList();
 
-                    return new ProblemDetailResponse(
-                            problem.getId(),
-                            problem.getSlug(),
-                            problem.getTitle(),
-                            problem.getTier(),
-                            problem.getLevel(),
-                            readFileSafely(problem.getStatementPath()),
-                            problem.getConstraints(),
-                            problem.getInputFormat(),
-                            problem.getOutputFormat(),
-                            problem.getCategories(),
-                            problem.getLanguages(),
-                            hints,
-                            allTestcases,
-                            samples,
-                            problem.getCreatedAt(),
-                            problem.getUpdatedAt()
-                    );
-                });
+        List<ProblemTestcaseResponse> samples = allTestcases.stream()
+                .filter(tc -> Boolean.FALSE.equals(tc.hidden()))
+                .toList();
+
+        List<ProblemHintDto> hints = problemHintRepository.findAllByProblemOrderByStageAsc(problem)
+                .stream()
+                .map(hint -> new ProblemHintDto(
+                        hint.getStage(),
+                        hint.getTitle(),
+                        hint.getContentMarkdown(),
+                        hint.getWaitSeconds()
+                ))
+                .toList();
+
+        return new ProblemDetailResponse(
+                problem.getId(),
+                problem.getSlug(),
+                problem.getTitle(),
+                problem.getTier(),
+                problem.getLevel(),
+                readFileSafely(problem.getStatementPath()),
+                problem.getConstraints(),
+                problem.getInputFormat(),
+                problem.getOutputFormat(),
+                problem.getCategories(),
+                problem.getLanguages(),
+                hints,
+                allTestcases,
+                samples,
+                problem.getCreatedAt(),
+                problem.getUpdatedAt()
+        );
     }
 
     private ProblemSummaryResponse toSummary(Problem problem) {
@@ -92,7 +99,7 @@ public class ProblemQueryService {
                 problem.getLevel(),
                 problem.getCategories(),
                 problem.getLanguages(),
-                readFileSafely(problem.getStatementPath()),
+                "", // Don't load statement for summary - it's too slow
                 problem.getCreatedAt(),
                 problem.getUpdatedAt()
         );

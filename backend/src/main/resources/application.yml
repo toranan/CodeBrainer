@@ -23,7 +23,7 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
-  
+
   flyway:
     enabled: false  # 개발 중에는 Hibernate로만 스키마 관리
   

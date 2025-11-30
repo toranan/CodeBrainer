@@ -85,6 +85,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
 
   const [judgeState, setJudgeState] = useState<JudgeState>({ status: "idle" });
   const [reviewState, setReviewState] = useState<ReviewState>({ status: "idle" });
+  const [authUser, setAuthUser] = useState<{ userId: string; token: string | null } | null>(null);
 
   const [hintStates, setHintStates] = useState<Record<number, HintState>>(() => {
     const initial: Record<number, HintState> = {};
@@ -95,6 +96,36 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   });
 
   const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const loadAuthUser = () => {
+      if (typeof window === "undefined") return;
+      const token = window.localStorage.getItem("token");
+      const userJson = window.localStorage.getItem("user");
+      if (userJson) {
+        try {
+          const parsed = JSON.parse(userJson);
+          const userId = parsed?.userId != null ? String(parsed.userId) : "";
+          if (userId) {
+            setAuthUser({ userId, token });
+            return;
+          }
+        } catch (err) {
+          console.error("사용자 정보 파싱 실패:", err);
+        }
+      }
+      setAuthUser(null);
+    };
+
+    loadAuthUser();
+    window.addEventListener("storage", loadAuthUser);
+    window.addEventListener("authChange", loadAuthUser);
+
+    return () => {
+      window.removeEventListener("storage", loadAuthUser);
+      window.removeEventListener("authChange", loadAuthUser);
+    };
+  }, []);
 
   useEffect(() => {
     const hasCooldown = Object.values(hintStates).some(
@@ -173,6 +204,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           language,
           code: currentCode,
           mode: "run",
+          userId: authUser?.userId,
         }),
       });
 
@@ -196,6 +228,12 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   };
 
   const handleSubmit = async () => {
+    if (!authUser?.userId) {
+      toast.error("로그인이 필요합니다. 먼저 로그인해주세요.");
+      setJudgeState({ status: "idle" });
+      return;
+    }
+
     setJudgeState({ status: "submitting" });
     try {
       const res = await fetch("/api/judge/run", {
@@ -208,6 +246,8 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           language,
           code: currentCode,
           mode: "submit",
+          userId: authUser.userId,
+          token: authUser.token,
         }),
       });
 
@@ -220,7 +260,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
 
       if (data.status === "AC") {
         toast.success("정답입니다! AI 리뷰를 준비중이에요.");
-        await fetchAiReview();
+        await fetchAiReview(data.submissionId);
       } else {
         toast("정답이 아닙니다. 결과 패널을 확인하세요.");
       }
@@ -231,7 +271,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
     }
   };
 
-  const fetchAiReview = async () => {
+  const fetchAiReview = async (submissionId?: number) => {
     setReviewState({ status: "loading" });
     try {
       const res = await fetch("/api/ai/review", {
@@ -243,6 +283,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           problemId: problem.id,
           language,
           userCode: currentCode,
+          submissionId,
         }),
       });
 

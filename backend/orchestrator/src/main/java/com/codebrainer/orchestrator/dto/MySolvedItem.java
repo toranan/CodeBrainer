@@ -5,7 +5,8 @@ package com.codebrainer.orchestrator.dto;
  */
 public record MySolvedItem(
         ProblemBrief problem,
-        LastSubmission lastSubmission
+        LastSubmission lastSubmission,
+        Integer hintUsageCount
 ) {
 }
 

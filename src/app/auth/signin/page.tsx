@@ -84,7 +84,7 @@ export default function SignInPage() {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify({
-        userId: data.userId,
+        userId: String(data.userId),
         email: data.email,
         name: data.name,
         role: data.role,
