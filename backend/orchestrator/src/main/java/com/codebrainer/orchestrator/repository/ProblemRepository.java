@@ -10,5 +10,11 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     Optional<Problem> findBySlug(String slug);
 
     List<Problem> findAllByOrderByCreatedAtDesc();
+
+    // is_visible = true인 문제만 조회
+    List<Problem> findAllByIsVisibleTrueOrderByCreatedAtDesc();
+
+    // slug로 조회하되 is_visible = true인 것만
+    Optional<Problem> findBySlugAndIsVisibleTrue(String slug);
 }
 

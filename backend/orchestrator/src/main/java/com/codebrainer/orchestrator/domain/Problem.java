@@ -61,6 +61,9 @@ public class Problem {
     @Column(nullable = false)
     private String visibility;
 
+    @Column(name = "is_visible")
+    private Boolean isVisible = true;
+
     @Column(nullable = false)
     private Integer version;
 
@@ -180,6 +183,14 @@ public class Problem {
 
     public void setVisibility(String visibility) {
         this.visibility = visibility;
+    }
+
+    public Boolean getIsVisible() {
+        return isVisible;
+    }
+
+    public void setIsVisible(Boolean isVisible) {
+        this.isVisible = isVisible;
     }
 
     public Integer getVersion() {

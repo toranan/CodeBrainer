@@ -34,14 +34,16 @@ public class ProblemQueryService {
     }
 
     public List<ProblemSummaryResponse> fetchSummaries() {
-        return problemRepository.findAllByOrderByCreatedAtDesc()
+        // is_visible = true인 문제만 반환
+        return problemRepository.findAllByIsVisibleTrueOrderByCreatedAtDesc()
                 .stream()
                 .map(this::toSummary)
                 .toList();
     }
 
     public Optional<ProblemDetailResponse> fetchDetailBySlug(String slug) {
-        return problemRepository.findBySlug(slug)
+        // is_visible = true인 문제만 반환
+        return problemRepository.findBySlugAndIsVisibleTrue(slug)
                 .map(this::buildDetailResponse);
     }
 

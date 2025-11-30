@@ -47,6 +47,7 @@ export interface ProblemDetail {
   languages: SupportedLanguage[];
   hints: ProblemHint[];
   solutions: ProblemSolutionSummary[];
+  isVisible?: boolean;
   createdAt: string;
   updatedAt: string;
 }

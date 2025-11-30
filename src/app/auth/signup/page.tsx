@@ -38,7 +38,7 @@ export default function SignUpPage() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
-    
+
     // username이 변경되면 중복 체크 상태 초기화
     if (name === "username") {
       setUsernameChecked(false);
@@ -59,13 +59,13 @@ export default function SignUpPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/auth/check-username?username=${encodeURIComponent(formData.username)}`
+        `http://localhost:8081/api/auth/check-username?username=${encodeURIComponent(formData.username)}`
       );
       const data = await response.json();
-      
+
       setUsernameChecked(true);
       setUsernameAvailable(data.available);
-      
+
       if (data.available) {
         toast.success("사용 가능한 아이디입니다");
         setErrors((prev) => ({ ...prev, username: "" }));
@@ -125,7 +125,7 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8080/api/auth/signup", {
+      const response = await fetch("http://localhost:8081/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
