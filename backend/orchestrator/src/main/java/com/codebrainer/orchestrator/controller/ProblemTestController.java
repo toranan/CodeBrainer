@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.codebrainer.orchestrator.dto.ProblemTestcaseResponse;
 import com.codebrainer.orchestrator.service.ProblemTestService;
@@ -18,11 +20,26 @@ public class ProblemTestController {
 
     @PostMapping("/ai")
     public ResponseEntity<List<ProblemTestcaseResponse>> createByAi(
-            @PathVariable Long problemId
-    ) throws IOException, InterruptedException {
+        @PathVariable Long problemId,
+        @RequestBody Map<String, Object> body
+    ) throws IOException {
 
-        List<ProblemTestcaseResponse> result = problemTestService.generateAndSaveTests(problemId);
-
-        return ResponseEntity.ok(result);
+    Object raw = body.get("content");
+    if (raw == null) {
+        return ResponseEntity.badRequest().body(List.of());
     }
+
+    String jsonArr;
+
+    if (raw instanceof String s) {
+        jsonArr = s;
+    } else {
+        // JSON 객체가 오면 바로 변환
+        jsonArr = new ObjectMapper().writeValueAsString(raw);
+    }
+
+    List<ProblemTestcaseResponse> result = problemTestService.saveTestsFromJson(problemId, jsonArr);
+    return ResponseEntity.ok(result);
+    }
+
 }

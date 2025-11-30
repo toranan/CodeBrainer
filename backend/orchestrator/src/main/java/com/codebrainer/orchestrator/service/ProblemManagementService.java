@@ -80,21 +80,16 @@ public class ProblemManagementService {
         problem.setUpdatedAt(null);
         problem.setCategories(categories == null ? List.of() : categories);
         problem.setLanguages(fixedLanguages());
-        problem.setInputFormat(problem.getInputFormat());
-        problem.setOutputFormat(problem.getOutputFormat());
+        // problem.setSlug("temp");
 
-
-        Problem saved = problemRepository.save(problem);
+        String slug = "problem-" + problem.getId();
+        problem.setSlug(slug);
 
         String statementPath = buildStatementPath(problem.getId());
         storageClient.saveString(statementPath, statement);
-        saved.setStatementPath(statementPath);
+        problem.setStatementPath(statementPath);
 
-        if (saved.getSlug() == null || saved.getSlug().isBlank()) {
-            saved.setSlug("problem-" + saved.getId());
-        }
-
-        return problemRepository.save(saved);
+        return problemRepository.save(problem);
     }
 
     @Transactional
