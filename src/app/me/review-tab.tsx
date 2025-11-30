@@ -59,7 +59,13 @@ export function ReviewTab({ userId }: { userId: string | null }) {
     }) ?? [];
 
   // 추천 문제 (현재는 빈 배열, 필요시 별도 API 추가)
-  const recommendedProblems: any[] = [];
+  const recommendedProblems: Array<{
+    id: string;
+    title: string;
+    difficulty: string;
+    category: string;
+    reason: string;
+  }> = [];
 
   return (
     <div className="space-y-6">

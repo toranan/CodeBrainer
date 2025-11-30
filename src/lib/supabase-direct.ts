@@ -11,7 +11,7 @@ interface SupabaseResponse<T> {
 
 export const supabaseDirect = {
   from: (table: string) => ({
-    select: async (columns = '*', filters?: Record<string, any>) => {
+    select: async (columns = '*', filters?: Record<string, unknown>) => {
       try {
         let url = `${SUPABASE_URL}/rest/v1/${table}?select=${columns}`;
         
@@ -41,7 +41,7 @@ export const supabaseDirect = {
       }
     },
 
-    insert: async (values: any) => {
+    insert: async (values: Record<string, unknown>) => {
       try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
           method: 'POST',
@@ -66,7 +66,7 @@ export const supabaseDirect = {
       }
     },
 
-    update: async (id: number, values: any) => {
+    update: async (id: number, values: Record<string, unknown>) => {
       try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
           method: 'PATCH',

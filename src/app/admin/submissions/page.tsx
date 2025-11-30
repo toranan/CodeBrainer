@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Search, CheckCircle, XCircle, Clock, AlertCircle, LucideIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -32,7 +32,7 @@ interface Submission {
   problem_slug?: string;
 }
 
-const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
+const STATUS_MAP: Record<string, { label: string; color: string; icon: LucideIcon }> = {
   AC: {
     label: "정답",
     color: "bg-green-100 text-green-800",

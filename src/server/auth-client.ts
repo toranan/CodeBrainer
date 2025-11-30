@@ -1,7 +1,7 @@
 // Authentication backend API client (port 8081)
 const AUTH_API_URL = "http://localhost:8081/api";
 
-export async function authFetch<T = any>(
+export async function authFetch<T = unknown>(
   path: string,
   options?: RequestInit
 ): Promise<Response> {

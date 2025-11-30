@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 interface Problem {
   id: number;
@@ -254,7 +255,7 @@ export default function AdminHints() {
                         : ""
                     }
                   >
-                    {editingHint?.id === hint.id ? (
+                    {editingHint?.id === hint.id && editingHint ? (
                       <CardContent className="space-y-4 pt-6">
                         <div className="grid gap-4 md:grid-cols-2">
                           <div>

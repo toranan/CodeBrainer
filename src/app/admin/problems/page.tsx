@@ -67,7 +67,7 @@ export default function AdminProblems() {
       }
 
       // categories와 languages를 배열로 파싱
-      const processedData = (data || []).map((problem: any) => ({
+      const processedData = (data || []).map((problem: Record<string, unknown>) => ({
         ...problem,
         categories: typeof problem.categories === 'string' 
           ? JSON.parse(problem.categories) 
