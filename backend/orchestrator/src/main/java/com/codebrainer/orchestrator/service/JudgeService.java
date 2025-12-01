@@ -99,8 +99,8 @@ public class JudgeService {
         List<Judge0SubmissionRequest> judgeRequests = new ArrayList<>();
         for (ProblemTest test : tests) {
             try {
-                String input = new String(storageClient.read(test.getInputPath()));
-                String output = new String(storageClient.read(test.getOutputPath()));
+                String input = new String(storageClient.read(normalizePath(test.getInputPath())));
+                String output = new String(storageClient.read(normalizePath(test.getOutputPath())));
                 log.debug("테스트케이스 {}: inputPath={}, outputPath={}", 
                     test.getId(), test.getInputPath(), test.getOutputPath());
                 
@@ -212,7 +212,7 @@ public class JudgeService {
             // 출력 끝의 공백/줄바꿈 제거
             stdout = stdout.trim();
             
-            String expected = new String(storageClient.read(test.getOutputPath()));
+            String expected = new String(storageClient.read(normalizePath(test.getOutputPath())));
             // 예상 출력도 정규화
             expected = expected.trim();
 
@@ -388,6 +388,21 @@ public class JudgeService {
             case INTERNAL_ERROR -> "ERR";
             default -> "PENDING";
         };
+    }
+
+    /**
+     * Normalize storage path by removing /data/storage/ prefix if present.
+     * This ensures compatibility with Supabase storage.
+     */
+    private String normalizePath(String path) {
+        if (path == null) {
+            return null;
+        }
+        // Remove /data/storage/ prefix if present
+        if (path.startsWith("/data/storage/")) {
+            return path.substring("/data/storage/".length());
+        }
+        return path;
     }
 
     private Submission.Status determineFinalStatus(SubmissionSummary summary) {
