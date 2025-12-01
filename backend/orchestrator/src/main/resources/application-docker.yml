@@ -29,8 +29,8 @@ spring:
     baseline-on-migrate: ${SPRING_FLYWAY_BASELINE_ON_MIGRATE:true}
 
 storage:
-  type: ${STORAGE_TYPE:local}  # local or supabase
-  base-path: ${STORAGE_BASE_PATH:/data/storage}
+  type: ${STORAGE_TYPE:supabase}  # local or supabase
+  base-path: ${STORAGE_BASE_PATH:}
   supabase:
     url: ${SUPABASE_URL:}
     key: ${SUPABASE_SERVICE_ROLE_KEY:}
