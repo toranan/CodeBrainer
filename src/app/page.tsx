@@ -42,7 +42,7 @@ export default function Home() {
                 문제 풀러가기
               </Link>
               <Link
-                href="/mock"
+                href="/problems/mock-exam"
                 className="inline-flex items-center rounded-md border border-primary/30 px-5 py-2.5 text-sm font-semibold text-primary transition hover:border-primary hover:text-primary"
               >
                 모의고사 시작
