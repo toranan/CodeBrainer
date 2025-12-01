@@ -72,8 +72,8 @@ public class CodeReviewService {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("제출을 찾을 수 없습니다: " + submissionId));
 
-        // 제출이 완료되었는지 확인
-        if (submission.getStatus() != Submission.Status.COMPLETED) {
+        // 제출이 완료되었는지 확인 (AC 상태도 포함)
+        if (submission.getStatus() != Submission.Status.AC && submission.getStatus() != Submission.Status.COMPLETED) {
             throw new IllegalStateException("완료된 제출만 리뷰할 수 있습니다.");
         }
 
