@@ -61,7 +61,8 @@ export default function SignInPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/login", {
+      const authBackendUrl = process.env.NEXT_PUBLIC_AUTH_BACKEND_URL || "http://localhost:8081";
+      const response = await fetch(`${authBackendUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

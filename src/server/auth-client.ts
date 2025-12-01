@@ -1,5 +1,7 @@
 // Authentication backend API client (port 8081)
-const AUTH_API_URL = "http://localhost:8081/api";
+const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_BACKEND_URL
+  ? `${process.env.NEXT_PUBLIC_AUTH_BACKEND_URL}/api`
+  : "http://localhost:8081/api";
 
 export async function authFetch<T = unknown>(
   path: string,

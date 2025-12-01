@@ -23,7 +23,7 @@ export function ProfileTab({ userInfo }: ProfileTabProps) {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -31,7 +31,8 @@ export function ProfileTab({ userInfo }: ProfileTabProps) {
         return;
       }
 
-      const response = await fetch("http://localhost:8081/api/users/profile", {
+      const authBackendUrl = process.env.NEXT_PUBLIC_AUTH_BACKEND_URL || "http://localhost:8081";
+      const response = await fetch(`${authBackendUrl}/api/users/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -61,7 +62,7 @@ export function ProfileTab({ userInfo }: ProfileTabProps) {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
       toast.error("새 비밀번호가 일치하지 않습니다");
       return;
@@ -79,7 +80,8 @@ export function ProfileTab({ userInfo }: ProfileTabProps) {
         return;
       }
 
-      const response = await fetch("http://localhost:8081/api/users/change-password", {
+      const authBackendUrl = process.env.NEXT_PUBLIC_AUTH_BACKEND_URL || "http://localhost:8081";
+      const response = await fetch(`${authBackendUrl}/api/users/change-password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

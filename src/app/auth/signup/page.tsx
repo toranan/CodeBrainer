@@ -58,8 +58,9 @@ export default function SignUpPage() {
     }
 
     try {
+      const authBackendUrl = process.env.NEXT_PUBLIC_AUTH_BACKEND_URL || "http://localhost:8081";
       const response = await fetch(
-        `http://localhost:8081/api/auth/check-username?username=${encodeURIComponent(formData.username)}`
+        `${authBackendUrl}/api/auth/check-username?username=${encodeURIComponent(formData.username)}`
       );
       const data = await response.json();
 
@@ -125,7 +126,8 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8081/api/auth/signup", {
+      const authBackendUrl = process.env.NEXT_PUBLIC_AUTH_BACKEND_URL || "http://localhost:8081";
+      const response = await fetch(`${authBackendUrl}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
