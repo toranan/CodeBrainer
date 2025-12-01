@@ -1,5 +1,6 @@
 package com.codebrainer.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,6 +20,9 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Value("${allowed.origins:http://localhost:3000,http://localhost:3001}")
+    private String allowedOrigins;
 
     /**
      * BCryptPasswordEncoder 빈 설정
@@ -63,34 +67,30 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        // 허용할 Origin (프론트엔드 주소)
-        configuration.setAllowedOrigins(
-            Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:3001"
-            )
-        );
-        
+
+        // 허용할 Origin (프론트엔드 주소) - 환경변수에서 읽어오기
+        String[] origins = allowedOrigins.split(",");
+        configuration.setAllowedOrigins(Arrays.asList(origins));
+
         // 허용할 HTTP 메서드
         configuration.setAllowedMethods(
             Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
         );
-        
+
         // 허용할 헤더
         configuration.setAllowedHeaders(List.of("*"));
-        
+
         // 자격증명 허용 (쿠키 등)
         configuration.setAllowCredentials(true);
-        
+
         // 노출할 헤더
         configuration.setExposedHeaders(
             Arrays.asList("Authorization", "Content-Type")
         );
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-        
+
         return source;
     }
 }
