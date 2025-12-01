@@ -391,27 +391,22 @@ public class JudgeService {
     }
 
     /**
-     * Normalize storage path by removing /data/storage/ prefix and converting problem ID to slug.
+     * Normalize storage path by removing /data/storage/ prefix.
+     * The path should already contain the correct slug-based folder name (e.g., problem-2864).
      * This ensures compatibility with Supabase storage.
      */
     private String normalizePath(String path, com.codebrainer.orchestrator.domain.Problem problem) {
         if (path == null) {
             return null;
         }
-        
+
         // Remove /data/storage/ prefix if present
         if (path.startsWith("/data/storage/")) {
             path = path.substring("/data/storage/".length());
         }
-        
-        // Convert problem-{id} to problem-{slug} in path
-        // e.g., "problems/problem-541/tests/1.in" -> "problems/problem-2864/tests/1.in"
-        if (problem != null && problem.getSlug() != null) {
-            String problemIdPattern = "problem-" + problem.getId();
-            String problemSlugPattern = "problem-" + problem.getSlug();
-            path = path.replace(problemIdPattern, problemSlugPattern);
-        }
-        
+
+        // Path should already be in the format: problems/problem-{slug}/tests/1.in
+        // No conversion needed - the database stores paths with slug, not ID
         return path;
     }
 
