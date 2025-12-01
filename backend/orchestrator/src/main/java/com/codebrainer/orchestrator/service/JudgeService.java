@@ -99,8 +99,8 @@ public class JudgeService {
         List<Judge0SubmissionRequest> judgeRequests = new ArrayList<>();
         for (ProblemTest test : tests) {
             try {
-                String input = new String(storageClient.read(normalizePath(test.getInputPath())));
-                String output = new String(storageClient.read(normalizePath(test.getOutputPath())));
+                String input = new String(storageClient.read(normalizePath(test.getInputPath(), submission.getProblem())));
+                String output = new String(storageClient.read(normalizePath(test.getOutputPath(), submission.getProblem())));
                 log.debug("테스트케이스 {}: inputPath={}, outputPath={}", 
                     test.getId(), test.getInputPath(), test.getOutputPath());
                 
@@ -212,7 +212,7 @@ public class JudgeService {
             // 출력 끝의 공백/줄바꿈 제거
             stdout = stdout.trim();
             
-            String expected = new String(storageClient.read(normalizePath(test.getOutputPath())));
+            String expected = new String(storageClient.read(normalizePath(test.getOutputPath(), submission.getProblem())));
             // 예상 출력도 정규화
             expected = expected.trim();
 
@@ -391,17 +391,27 @@ public class JudgeService {
     }
 
     /**
-     * Normalize storage path by removing /data/storage/ prefix if present.
+     * Normalize storage path by removing /data/storage/ prefix and converting problem ID to slug.
      * This ensures compatibility with Supabase storage.
      */
-    private String normalizePath(String path) {
+    private String normalizePath(String path, com.codebrainer.orchestrator.domain.Problem problem) {
         if (path == null) {
             return null;
         }
+        
         // Remove /data/storage/ prefix if present
         if (path.startsWith("/data/storage/")) {
-            return path.substring("/data/storage/".length());
+            path = path.substring("/data/storage/".length());
         }
+        
+        // Convert problem-{id} to problem-{slug} in path
+        // e.g., "problems/problem-541/tests/1.in" -> "problems/problem-2864/tests/1.in"
+        if (problem != null && problem.getSlug() != null) {
+            String problemIdPattern = "problem-" + problem.getId();
+            String problemSlugPattern = "problem-" + problem.getSlug();
+            path = path.replace(problemIdPattern, problemSlugPattern);
+        }
+        
         return path;
     }
 
