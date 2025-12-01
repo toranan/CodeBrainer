@@ -21,7 +21,7 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Value("${allowed.origins:http://localhost:3000,http://localhost:3001}")
+    @Value("${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}")
     private String allowedOrigins;
 
     /**
