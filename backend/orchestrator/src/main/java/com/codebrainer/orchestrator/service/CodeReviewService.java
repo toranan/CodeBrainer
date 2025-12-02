@@ -53,36 +53,45 @@ public class CodeReviewService {
     }
 
     /**
-     * 제출에 대한 코드 리뷰를 생성합니다.
+     * 제출에 대한 코드 리뷰 또는 힌트를 생성합니다.
      * 이미 리뷰가 존재하면 기존 리뷰를 반환합니다.
      *
      * @param submissionId 제출 ID
+     * @param mode "review" 또는 "hint"
      * @return 코드 리뷰 응답
      */
     @Transactional
-    public CodeReviewResponse generateReview(Long submissionId) {
-        // 이미 리뷰가 존재하는지 확인
-        Optional<CodeReview> existingReview = codeReviewRepository.findBySubmissionId(submissionId);
-        if (existingReview.isPresent()) {
-            log.info("Code review already exists for submission {}", submissionId);
-            return toResponse(existingReview.get());
+    public CodeReviewResponse generateReview(Long submissionId, String mode) {
+        // 힌트 모드가 아닌 경우, 기존 로직 유지
+        boolean isHintMode = "hint".equalsIgnoreCase(mode);
+        
+        // 이미 리뷰가 존재하는지 확인 (힌트 모드는 매번 새로 생성)
+        if (!isHintMode) {
+            Optional<CodeReview> existingReview = codeReviewRepository.findBySubmissionId(submissionId);
+            if (existingReview.isPresent()) {
+                log.info("Code review already exists for submission {}", submissionId);
+                return toResponse(existingReview.get());
+            }
         }
 
         // 제출 정보 조회
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("제출을 찾을 수 없습니다: " + submissionId));
 
-        // 제출이 완료되었는지 확인 (AC 상태도 포함)
-        if (submission.getStatus() != Submission.Status.AC && submission.getStatus() != Submission.Status.COMPLETED) {
-            throw new IllegalStateException("완료된 제출만 리뷰할 수 있습니다.");
-        }
+        // 힌트 모드는 틀린 제출에도 작동, 리뷰 모드는 AC만
+        if (!isHintMode) {
+            // 제출이 완료되었는지 확인 (AC 상태도 포함)
+            if (submission.getStatus() != Submission.Status.AC && submission.getStatus() != Submission.Status.COMPLETED) {
+                throw new IllegalStateException("완료된 제출만 리뷰할 수 있습니다.");
+            }
 
-        // 제출 결과 조회 (모든 테스트를 통과했는지 확인)
-        SubmissionResult result = submissionResultRepository.findBySubmission(submission)
-                .orElseThrow(() -> new IllegalStateException("제출 결과를 찾을 수 없습니다."));
+            // 제출 결과 조회 (모든 테스트를 통과했는지 확인)
+            SubmissionResult result = submissionResultRepository.findBySubmission(submission)
+                    .orElseThrow(() -> new IllegalStateException("제출 결과를 찾을 수 없습니다."));
 
-        if (!isAllTestsPassed(result)) {
-            throw new IllegalStateException("모든 테스트를 통과한 제출만 리뷰할 수 있습니다.");
+            if (!isAllTestsPassed(result)) {
+                throw new IllegalStateException("모든 테스트를 통과한 제출만 리뷰할 수 있습니다.");
+            }
         }
 
         // 코드 읽기
@@ -99,23 +108,37 @@ public class CodeReviewService {
             }
         }
 
-        // AI 리뷰 생성 (problemId 추가)
-        String reviewContent = geminiAIService.generateCodeReview(
-                code,
-                problem.getTitle(),
-                problemStatement,
-                submission.getLanguageId(),
-                problem.getId()
-        );
+        // AI 리뷰 또는 힌트 생성
+        String reviewContent;
+        if (isHintMode) {
+            reviewContent = geminiAIService.generateHint(
+                    code,
+                    problem.getTitle(),
+                    problemStatement,
+                    submission.getLanguageId(),
+                    problem.getId(),
+                    submission.getStatus().name()
+            );
+        } else {
+            reviewContent = geminiAIService.generateCodeReview(
+                    code,
+                    problem.getTitle(),
+                    problemStatement,
+                    submission.getLanguageId(),
+                    problem.getId()
+            );
+        }
 
         // 리뷰에서 평점 추출 (optional)
         Integer rating = extractRating(reviewContent);
 
-        // 리뷰 저장
+        // 리뷰 저장 (힌트 모드는 저장하지 않을 수도 있음)
         CodeReview codeReview = new CodeReview(submission, reviewContent, rating, null);
-        codeReview = codeReviewRepository.save(codeReview);
+        if (!isHintMode) {
+            codeReview = codeReviewRepository.save(codeReview);
+        }
 
-        log.info("Code review generated for submission {}", submissionId);
+        log.info("{} generated for submission {}", isHintMode ? "Hint" : "Code review", submissionId);
         return toResponse(codeReview);
     }
 

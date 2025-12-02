@@ -97,6 +97,58 @@ public class GeminiAIService {
     }
 
     /**
+     * 제출된 코드에 대한 AI 힌트를 생성합니다. (정답 미포함)
+     *
+     * @param code 제출된 코드
+     * @param problemTitle 문제 제목
+     * @param problemStatement 문제 설명 (optional)
+     * @param languageId 프로그래밍 언어
+     * @param problemId 문제 ID
+     * @param verdict 제출 결과 (WA, TLE, RE 등)
+     * @return AI 생성 힌트 텍스트
+     */
+    public String generateHint(String code, String problemTitle, String problemStatement, String languageId, Long problemId, String verdict) {
+        if (!geminiProperties.isEnabled()) {
+            log.warn("Gemini AI is disabled. Skipping hint generation.");
+            return "AI 힌트 기능이 비활성화되어 있습니다.";
+        }
+
+        if (geminiProperties.getApiKey() == null || geminiProperties.getApiKey().isEmpty()) {
+            log.error("Gemini API key is not configured.");
+            throw new IllegalStateException("Gemini API key가 설정되지 않았습니다.");
+        }
+
+        try {
+            String prompt = buildHintPrompt(code, problemTitle, problemStatement, languageId, problemId, verdict);
+            String apiUrl = String.format(GEMINI_API_URL, geminiProperties.getModel()) + "?key=" + geminiProperties.getApiKey();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("contents", List.of(
+                    Map.of("parts", List.of(Map.of("text", prompt)))
+            ));
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+            log.debug("Sending hint request to Gemini API: {}", apiUrl);
+            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, request, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return extractReviewFromResponse(response.getBody());
+            } else {
+                log.error("Gemini API returned non-success status: {}", response.getStatusCode());
+                return "AI 힌트 생성에 실패했습니다.";
+            }
+
+        } catch (Exception e) {
+            log.error("Error generating hint with Gemini AI", e);
+            return "AI 힌트 생성 중 오류가 발생했습니다: " + e.getMessage();
+        }
+    }
+
+    /**
      * 코드 리뷰를 위한 프롬프트를 생성합니다.
      * DB에 저장된 정답 코드를 사용자 언어로 변환합니다.
      */
@@ -209,6 +261,58 @@ public class GeminiAIService {
         prompt.append("### 점수: X/5\n\n");
         prompt.append("### 상세 설명:\n");
         prompt.append("(시간/공간 복잡도, 에지 케이스 처리 등 추가 분석)\n");
+
+        return prompt.toString();
+    }
+
+    /**
+     * 힌트를 위한 프롬프트를 생성합니다.
+     * 정답 코드를 포함하지 않고, 방향성만 제시합니다.
+     */
+    private String buildHintPrompt(String code, String problemTitle, String problemStatement, String languageId, Long problemId, String verdict) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("당신은 코딩 교육 AI 튜터입니다. 학생이 문제를 틀렸습니다.\n");
+        prompt.append("정답 코드는 **절대** 알려주지 말고, 스스로 해결할 수 있도록 힌트만 제공하세요.\n\n");
+        
+        prompt.append("# 문제: ").append(problemTitle).append("\n\n");
+
+        if (problemStatement != null && !problemStatement.isEmpty()) {
+            prompt.append("# 문제 설명:\n").append(problemStatement).append("\n\n");
+        }
+
+        prompt.append("# 프로그래밍 언어: ").append(languageId).append("\n");
+        prompt.append("# 제출 결과: ").append(verdict).append("\n\n");
+        
+        prompt.append("# 학생의 제출 코드:\n```").append(languageId).append("\n");
+        prompt.append(code).append("\n```\n\n");
+
+        // DB에서 정답 코드 불러오기 (참고용으로만 사용하고 유출 금지)
+        Optional<ProblemSolution> solutionOpt = problemSolutionRepository.findFirstByProblemId(problemId);
+        
+        if (solutionOpt.isPresent()) {
+            ProblemSolution solution = solutionOpt.get();
+            prompt.append("# (참고용) 정답 코드 - **절대 사용자에게 노출 금지**:\n");
+            prompt.append("```").append(solution.getLanguage().toLowerCase()).append("\n");
+            prompt.append(solution.getCode()).append("\n```\n\n");
+        }
+
+        prompt.append("# 힌트 작성 규칙:\n");
+        prompt.append("1. **정답 코드나 구체적인 수정 코드를 절대 제공하지 마세요.**\n");
+        prompt.append("2. 학생의 코드에서 논리적 오류, 엣지 케이스 누락, 비효율적인 부분 등을 찾아 설명하세요.\n");
+        prompt.append("3. 질문 형태로 생각할 거리를 던져주는 것이 좋습니다.\n");
+        prompt.append("4. 출력 형식이 잘못되었는지도 확인해주세요.\n\n");
+
+        prompt.append("---\n\n");
+        prompt.append("응답 형식: 반드시 아래 형식을 정확히 따라 작성하세요.\n\n");
+        
+        prompt.append("### 문제점 분석:\n");
+        prompt.append("- (코드의 잠재적 문제점이나 놓친 부분을 설명)\n");
+        prompt.append("- (출력 형식이나 예외 처리 관련 문제)\n\n");
+        
+        prompt.append("### 다시 생각해볼 점:\n");
+        prompt.append("- (알고리즘 접근 방식에 대한 질문)\n");
+        prompt.append("- (시간 복잡도나 효율성 관련 힌트)\n");
+        prompt.append("- (테스트해볼 만한 입력값 예시)\n");
 
         return prompt.toString();
     }

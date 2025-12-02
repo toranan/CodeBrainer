@@ -34,10 +34,12 @@ public class CodeReviewController {
      * @return 생성된 코드 리뷰
      */
     @PostMapping("/submissions/{submissionId}")
-    public ResponseEntity<?> createReview(@PathVariable("submissionId") Long submissionId) {
+    public ResponseEntity<?> createReview(
+            @PathVariable("submissionId") Long submissionId,
+            @RequestParam(value = "mode", required = false, defaultValue = "review") String mode) {
         try {
-            log.info("Generating code review for submission: {}", submissionId);
-            CodeReviewResponse review = codeReviewService.generateReview(submissionId);
+            log.info("Generating {} for submission: {}", mode, submissionId);
+            CodeReviewResponse review = codeReviewService.generateReview(submissionId, mode);
             return ResponseEntity.status(HttpStatus.CREATED).body(review);
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("Failed to generate code review: {}", e.getMessage());
