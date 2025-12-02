@@ -53,7 +53,7 @@ public class MyPageService {
                 FROM submissions s
                 JOIN problems p ON p.id = s.problem_id
                 LEFT JOIN submission_results sr ON sr.submission_id = s.id
-                WHERE s.user_id = :userId
+                WHERE s.user_id = CAST(:userId AS TEXT)
                   AND UPPER(p.visibility) = 'PUBLIC'
                 """);
 
@@ -169,7 +169,7 @@ public class MyPageService {
                     JOIN problems p ON p.id = s.problem_id
                     CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(p.categories) AS cat(category)
                     LEFT JOIN submission_results sr ON sr.submission_id = s.id
-                    WHERE s.user_id = :userId
+                    WHERE s.user_id = CAST(:userId AS TEXT)
                       AND UPPER(p.visibility) = 'PUBLIC'
                       AND sr.summary_json IS NOT NULL
                 ),
@@ -226,7 +226,7 @@ public class MyPageService {
                     FROM submissions s
                     JOIN problems p ON p.id = s.problem_id
                     LEFT JOIN submission_results sr ON sr.submission_id = s.id
-                    WHERE s.user_id = :userId
+                    WHERE s.user_id = CAST(:userId AS TEXT)
                       AND UPPER(p.visibility) = 'PUBLIC'
                       AND sr.summary_json IS NOT NULL
                       AND (sr.summary_json->>'verdict') != 'AC'
@@ -237,7 +237,7 @@ public class MyPageService {
                     FROM submissions s
                     JOIN problems p ON p.id = s.problem_id
                     LEFT JOIN submission_results sr ON sr.submission_id = s.id
-                    WHERE s.user_id = :userId
+                    WHERE s.user_id = CAST(:userId AS TEXT)
                       AND UPPER(p.visibility) = 'PUBLIC'
                       AND sr.summary_json IS NOT NULL
                       AND (sr.summary_json->>'verdict') = 'AC'
@@ -302,7 +302,7 @@ public class MyPageService {
                 FROM submissions s
                 JOIN problems p ON p.id = s.problem_id
                 LEFT JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(p.categories) AS cat(category) ON TRUE
-                WHERE s.user_id = :userId
+                WHERE s.user_id = CAST(:userId AS TEXT)
                   AND s.status IN ('AC', 'COMPLETED')
                   AND s.created_at >= NOW() - (:days || ' days')::interval
                   AND (:tier IS NULL OR UPPER(p.tier) = UPPER(:tier))
@@ -407,7 +407,7 @@ public class MyPageService {
                 FROM submissions s
                 JOIN problems p ON p.id = s.problem_id
                 CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(p.categories) AS cat(category)
-                WHERE s.user_id = :userId
+                WHERE s.user_id = CAST(:userId AS TEXT)
                   AND s.status IN ('AC', 'COMPLETED')
                   AND s.hint_usage_count IS NOT NULL
                   AND UPPER(p.visibility) = 'PUBLIC'
@@ -437,7 +437,7 @@ public class MyPageService {
                     COALESCE(SUM(CASE WHEN s.created_at <  NOW() - (:days || ' days')::interval THEN s.hint_usage_count END), 0) AS previous_hints
                 FROM submissions s
                 JOIN problems p ON p.id = s.problem_id
-                WHERE s.user_id = :userId
+                WHERE s.user_id = CAST(:userId AS TEXT)
                   AND s.status IN ('AC', 'COMPLETED')
                   AND s.hint_usage_count IS NOT NULL
                   AND UPPER(p.visibility) = 'PUBLIC'
@@ -467,7 +467,7 @@ public class MyPageService {
                     COALESCE(SUM(CASE WHEN s.created_at <  NOW() - (:days || ' days')::interval THEN s.hint_usage_count END), 0) AS previous_hints
                 FROM submissions s
                 JOIN problems p ON p.id = s.problem_id
-                WHERE s.user_id = :userId
+                WHERE s.user_id = CAST(:userId AS TEXT)
                   AND s.status IN ('AC', 'COMPLETED')
                   AND s.hint_usage_count IS NOT NULL
                   AND UPPER(p.visibility) = 'PUBLIC'
@@ -499,7 +499,7 @@ public class MyPageService {
                 FROM (
                     SELECT DISTINCT s.problem_id
                     FROM submissions s
-                    WHERE s.user_id = :userId
+                    WHERE s.user_id = CAST(:userId AS TEXT)
                       AND s.status IN ('AC', 'COMPLETED')
                 ) sp
                 JOIN problems p ON p.id = sp.problem_id
@@ -523,7 +523,7 @@ public class MyPageService {
                 FROM (
                     SELECT DISTINCT s.problem_id
                     FROM submissions s
-                    WHERE s.user_id = :userId
+                    WHERE s.user_id = CAST(:userId AS TEXT)
                       AND s.status IN ('AC', 'COMPLETED')
                 ) sp
                 JOIN problems p ON p.id = sp.problem_id
@@ -546,7 +546,7 @@ public class MyPageService {
                 FROM (
                     SELECT DISTINCT s.problem_id
                     FROM submissions s
-                    WHERE s.user_id = :userId
+                    WHERE s.user_id = CAST(:userId AS TEXT)
                       AND s.status IN ('AC', 'COMPLETED')
                 ) sp
                 JOIN problems p ON p.id = sp.problem_id
@@ -577,7 +577,7 @@ public class MyPageService {
                 LEFT JOIN (
                     SELECT DATE_TRUNC('day', created_at)::date AS day, COUNT(*) AS cnt
                     FROM submissions
-                    WHERE user_id = :userId
+                    WHERE user_id = CAST(:userId AS TEXT)
                       AND created_at >= NOW() - (:days || ' days')::interval
                     GROUP BY 1
                 ) s ON s.day = d::date
@@ -599,7 +599,7 @@ public class MyPageService {
                 FROM (
                     SELECT DISTINCT s.problem_id
                     FROM submissions s
-                    WHERE s.user_id = :userId AND s.status IN ('AC', 'COMPLETED')
+                    WHERE s.user_id = CAST(:userId AS TEXT) AND s.status IN ('AC', 'COMPLETED')
                 ) sp
                 JOIN problems p ON p.id = sp.problem_id
                 WHERE UPPER(p.visibility) = 'PUBLIC'
@@ -620,7 +620,7 @@ public class MyPageService {
                 FROM (
                     SELECT DISTINCT s.problem_id
                     FROM submissions s
-                    WHERE s.user_id = :userId AND s.status IN ('AC', 'COMPLETED')
+                    WHERE s.user_id = CAST(:userId AS TEXT) AND s.status IN ('AC', 'COMPLETED')
                 ) sp
                 JOIN problems p ON p.id = sp.problem_id
                 WHERE UPPER(p.visibility) = 'PUBLIC'
@@ -642,7 +642,7 @@ public class MyPageService {
                 FROM (
                     SELECT DISTINCT s.problem_id
                     FROM submissions s
-                    WHERE s.user_id = :userId AND s.status IN ('AC', 'COMPLETED')
+                    WHERE s.user_id = CAST(:userId AS TEXT) AND s.status IN ('AC', 'COMPLETED')
                 ) sp
                 JOIN problems p ON p.id = sp.problem_id
                 CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS_TEXT(p.categories) AS c(cat)
@@ -666,7 +666,7 @@ public class MyPageService {
                 FROM (
                     SELECT DISTINCT problem_id, lang_id
                     FROM submissions
-                    WHERE user_id = :userId
+                    WHERE user_id = CAST(:userId AS TEXT)
                       AND status IN ('AC', 'COMPLETED')
                       AND created_at >= NOW() - (:days || ' days')::interval
                 ) distinct_langs
@@ -688,7 +688,7 @@ public class MyPageService {
                 SELECT COUNT(*) FROM (
                     SELECT DISTINCT problem_id
                     FROM submissions
-                    WHERE user_id = :userId
+                    WHERE user_id = CAST(:userId AS TEXT)
                 ) t
                 """);
         attemptedQuery.setParameter("userId", userId);
@@ -700,7 +700,7 @@ public class MyPageService {
                     COUNT(CASE WHEN status IN ('AC', 'COMPLETED') AND created_at >= NOW() - INTERVAL '7 days' THEN 1 END) AS solved_week,
                     COUNT(CASE WHEN status IN ('AC', 'COMPLETED') AND created_at >= NOW() - INTERVAL '30 days' THEN 1 END) AS solved_month
                 FROM submissions
-                WHERE user_id = :userId
+                WHERE user_id = CAST(:userId AS TEXT)
                 """);
         solvedQuery.setParameter("userId", userId);
         Object[] solvedResult = (Object[]) solvedQuery.getSingleResult();

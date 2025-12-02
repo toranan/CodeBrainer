@@ -52,7 +52,7 @@ public class ReviewService {
                   AND p.id <> :baseProblemId
                   AND NOT EXISTS (
                       SELECT 1 FROM submissions s
-                      WHERE s.user_id = :userId
+                      WHERE s.user_id = CAST(:userId AS TEXT)
                         AND s.problem_id = p.id
                         AND s.status IN ('AC', 'COMPLETED')
                   )
@@ -128,7 +128,7 @@ public class ReviewService {
         Query query = entityManager.createNativeQuery("""
                 SELECT DISTINCT s.problem_id
                 FROM submissions s
-                WHERE s.user_id = :userId
+                WHERE s.user_id = CAST(:userId AS TEXT)
                   AND s.status IN ('AC', 'COMPLETED')
                 ORDER BY s.created_at DESC
                 LIMIT :limit

@@ -36,7 +36,7 @@ public class AIRecommendationService {
                        p.id, p.title, p.slug, p.tier, p.level, p.categories
                 FROM submissions s
                 JOIN problems p ON p.id = s.problem_id
-                WHERE s.user_id = :userId
+                WHERE s.user_id = CAST(:userId AS TEXT)
                   AND s.status = 'AC'
                   AND UPPER(p.visibility) = 'PUBLIC'
                 ORDER BY p.id, s.created_at DESC
