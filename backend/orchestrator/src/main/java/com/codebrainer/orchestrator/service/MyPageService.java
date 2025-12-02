@@ -61,13 +61,20 @@ public class MyPageService {
             baseWhere.append(" AND s.status = ANY(:statuses)");
         }
 
-        String countSql = "SELECT COUNT(*) " + baseWhere;
+        String countSql = "SELECT COUNT(DISTINCT p.id) " + baseWhere;
 
         String dataSql = """
-                SELECT s.id, p.id, p.title, p.slug, p.tier, p.level, p.categories,
-                       s.status, s.lang_id, s.created_at, s.hint_usage_count, sr.summary_json
-                """ + baseWhere + """
-                ORDER BY s.created_at DESC
+                WITH ranked_submissions AS (
+                    SELECT s.id, p.id AS problem_id, p.title, p.slug, p.tier, p.level, p.categories,
+                           s.status, s.lang_id, s.created_at, s.hint_usage_count, sr.summary_json,
+                           ROW_NUMBER() OVER (PARTITION BY p.id ORDER BY s.created_at DESC) as rn
+                    """ + baseWhere + """
+                )
+                SELECT id, problem_id, title, slug, tier, level, categories,
+                       status, lang_id, created_at, hint_usage_count, summary_json
+                FROM ranked_submissions
+                WHERE rn = 1
+                ORDER BY created_at DESC
                 LIMIT :size OFFSET :offset
                 """;
         
