@@ -19,6 +19,6 @@ COPY storage /data/storage
 
 EXPOSE 8080
 
-# Set JVM memory options to prevent OOM
-ENTRYPOINT ["java", "-Xmx512m", "-Xms256m", "-jar", "app.jar"]
+# Set JVM memory options to prevent OOM (optimized for 1GB Railway limit)
+ENTRYPOINT ["java", "-Xmx768m", "-Xms384m", "-XX:MaxMetaspaceSize=128m", "-XX:+UseG1GC", "-jar", "app.jar"]
 
