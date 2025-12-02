@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { validateLanguage } from "@/lib/language-validator";
 import {
   Card,
   CardContent,
@@ -143,6 +144,11 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
 
   const currentCode = codeMap[language] ?? defaultSnippet;
 
+  // 실시간 언어 검증 상태
+  const languageValidation = useMemo(() => {
+    return validateLanguage(currentCode, language);
+  }, [currentCode, language]);
+
   const difficultyLabel = useMemo(() => {
     switch (problem.difficulty) {
       case "BRONZE":
@@ -233,6 +239,17 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
       toast.error("로그인이 필요합니다. 먼저 로그인해주세요.");
       setJudgeState({ status: "idle" });
       return;
+    }
+
+    // 언어 검증
+    const validation = validateLanguage(currentCode, language);
+    if (!validation.isValid) {
+      toast.error(validation.message || "언어가 일치하지 않습니다.");
+      return;
+    }
+
+    if (validation.message) {
+      toast.warning(validation.message);
     }
 
     setJudgeState({ status: "submitting" });
@@ -412,6 +429,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   };
 
   const isBusy = judgeState.status === "running" || judgeState.status === "submitting";
+  const canSubmit = !isBusy && languageValidation.isValid;
 
   return (
     <>
@@ -513,7 +531,11 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
                       >
                         {judgeState.status === "running" ? "실행 중..." : "실행"}
                       </Button>
-                      <Button onClick={handleSubmit} disabled={isBusy} size="sm">
+                      <Button
+                        onClick={handleSubmit}
+                        disabled={!canSubmit}
+                        size="sm"
+                      >
                         {judgeState.status === "submitting" ? "제출 중..." : "제출"}
                       </Button>
                     </div>
@@ -536,6 +558,16 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
                     }}
                   />
                 </div>
+                {!languageValidation.isValid && languageValidation.message && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    <strong>⚠️ 제출 불가:</strong> {languageValidation.message}
+                  </div>
+                )}
+                {languageValidation.isValid && languageValidation.message && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <strong>⚠️ 경고:</strong> {languageValidation.message}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
