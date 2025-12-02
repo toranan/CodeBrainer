@@ -18,6 +18,7 @@ interface RunRequest {
   userId?: string
   token?: string | null
   hintUsageCount?: number // 힌트 사용량
+  aiAssistMode?: boolean // AI 보조모드
 }
 
 interface OrchestratorSubmissionResponse {
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
       // problem.detail.id를 숫자로 변환 (Orchestrator는 숫자 ID 필요)
       // id가 slug인 경우 Orchestrator API에서 직접 조회
       let problemNumericId: number
-      
+
       if (isNaN(parseInt(problem.detail.id, 10))) {
         // id가 숫자가 아니면 slug로 Orchestrator에서 문제 조회
         try {
@@ -145,7 +146,7 @@ export async function POST(request: Request) {
       } else {
         problemNumericId = parseInt(problem.detail.id, 10)
       }
-      
+
       if (isNaN(problemNumericId)) {
         return NextResponse.json(
           { error: "문제 ID를 숫자로 변환할 수 없습니다." },
@@ -162,7 +163,7 @@ export async function POST(request: Request) {
 
       const hintUsageCount = body.hintUsageCount ?? 0;
       console.log("제출 시 힌트 사용량:", hintUsageCount);
-      
+
       const orchestratorDetail = await submitToOrchestrator(
         problemNumericId,
         languageUpper,
@@ -175,7 +176,40 @@ export async function POST(request: Request) {
       )
 
       // Orchestrator 응답을 프론트엔드 형식으로 변환
-      return formatOrchestratorResponse(orchestratorDetail, problem.testcases)
+      const response = formatOrchestratorResponse(orchestratorDetail, problem.testcases)
+
+      // AI 보조모드가 활성화되어 있고, 틀렸을 때 힌트 생성
+      if (body.aiAssistMode && orchestratorDetail.status !== "COMPLETED") {
+        try {
+          const hintResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai/hint`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              submissionId: orchestratorDetail.submissionId,
+              userCode: body.code,
+              language: languageUpper,
+              problemId: body.problemId,
+              verdict: orchestratorDetail.status,
+            }),
+          })
+
+          if (hintResponse.ok) {
+            const hintData = await hintResponse.json()
+            // 힌트를 응답에 추가
+            return NextResponse.json({
+              ...response.json(), // Extract the JSON body from the NextResponse
+              aiHint: hintData,
+            })
+          }
+        } catch (hintError) {
+          console.error("AI 힌트 생성 오류:", hintError)
+          // 힌트 실패해도 원래 응답은 반환
+        }
+      }
+
+      return response
     } catch (error) {
       console.error("Orchestrator 제출 오류:", error)
       return NextResponse.json(

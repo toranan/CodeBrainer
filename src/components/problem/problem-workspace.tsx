@@ -98,6 +98,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   });
 
   const [now, setNow] = useState(Date.now());
+  const [aiAssistMode, setAiAssistMode] = useState(false);
 
   useEffect(() => {
     const loadAuthUser = () => {
@@ -266,6 +267,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           mode: "submit",
           userId: authUser.userId,
           token: authUser.token,
+          aiAssistMode,
         }),
       });
 
@@ -453,6 +455,14 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
             <p className="text-sm text-slate-500">문제 ID: {problem.slug}</p>
           </div>
           <div className="flex flex-col items-end gap-2 text-right text-xs text-slate-500">
+            <Button
+              variant={aiAssistMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setAiAssistMode(!aiAssistMode)}
+              className="mb-2"
+            >
+              {aiAssistMode ? "🤖 AI 보조모드 ON" : "🤖 AI 보조모드 OFF"}
+            </Button>
             <span>지원 언어 {problem.languages.length}종</span>
             <span>최종 수정 {new Date(problem.updatedAt).toLocaleDateString()}</span>
           </div>
