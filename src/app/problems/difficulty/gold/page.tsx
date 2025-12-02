@@ -11,6 +11,7 @@ function truncate(text: string, maxLength: number) {
   return `${text.slice(0, maxLength)}…`
 }
 
+export const revalidate = 7200; // 2시간마다 갱신
 export default async function GoldProblemsPage() {
   const problems = await fetchProblemSummaries()
   const goldProblems = problems.filter((p) => p.difficulty === "GOLD")
