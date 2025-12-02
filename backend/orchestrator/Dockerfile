@@ -19,5 +19,6 @@ COPY storage /data/storage
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Set JVM memory options to prevent OOM
+ENTRYPOINT ["java", "-Xmx512m", "-Xms256m", "-jar", "app.jar"]
 
