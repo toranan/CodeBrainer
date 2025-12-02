@@ -27,7 +27,8 @@ export default function MyPage() {
   const [page, setPage] = useState(0);
   const [recentPage, setRecentPage] = useState(0);
   const [hintDays, setHintDays] = useState<7 | 30 | 90 | 365>(30);
-  const size = 10;
+  const recentSize = 5; // 최근 푼 문제
+  const attemptedSize = 10; // 시도한 전체 문제
 
   // 로그인 체크
   useEffect(() => {
@@ -47,15 +48,15 @@ export default function MyPage() {
   }, [router]);
 
   const { data: list } = useQuery({
-    queryKey: ["me/problems", userId, recentPage, size],
-    queryFn: () => getMyProblems({ userId: userId!, status: "AC", page: recentPage, size }),
+    queryKey: ["me/problems", userId, recentPage, recentSize],
+    queryFn: () => getMyProblems({ userId: userId!, status: "AC", page: recentPage, size: recentSize }),
     enabled: userId !== null,
   });
 
   // 시도한 문제 전체 목록 (AC 포함 모든 제출)
   const { data: attemptedList } = useQuery({
-    queryKey: ["me/problems/attempted", userId, page, size],
-    queryFn: () => getMyProblems({ userId: userId!, status: "", page, size }), // 빈 문자열로 모든 제출 조회
+    queryKey: ["me/problems/attempted", userId, page, attemptedSize],
+    queryFn: () => getMyProblems({ userId: userId!, status: "", page, size: attemptedSize }), // 빈 문자열로 모든 제출 조회
     enabled: userId !== null,
   });
 
