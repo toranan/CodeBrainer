@@ -21,6 +21,9 @@ spring:
   flyway:
     enabled: false  # 개발 중에는 Hibernate로만 스키마 관리
   
+  flyway:
+    enabled: false  # 개발 중에는 Hibernate로만 스키마 관리
+  
   # CORS 설정 (Next.js 프론트엔드와 통신)
   web:
     cors:

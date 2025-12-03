@@ -98,6 +98,78 @@ async function submitToOrchestrator(
   )
 }
 
+interface OrchestratorSubmissionResponse {
+  submissionId: number
+  status: string
+}
+
+interface OrchestratorSubmissionDetail {
+  submissionId: number
+  status: string
+  result: {
+    compile: {
+      ok: boolean
+      message: string | null
+    }
+    summary: string
+    tests: string
+  } | null
+}
+
+// Orchestrator API로 제출 생성 및 결과 폴링
+async function submitToOrchestrator(
+  problemId: number,
+  langId: string,
+  code: string,
+): Promise<OrchestratorSubmissionDetail> {
+  // 1. 제출 생성
+  const createResponse = await orchestratorFetch<OrchestratorSubmissionResponse>(
+    "/api/submissions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        problemId,
+        langId,
+        code,
+      }),
+    },
+  )
+
+  const submissionId = createResponse.submissionId
+
+  // 2. 제출 완료까지 폴링 (최대 60초)
+  const maxAttempts = 60
+  const pollInterval = 1000 // 1초
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const detail = await orchestratorFetch<OrchestratorSubmissionDetail>(
+      `/api/submissions/${submissionId}`,
+    )
+
+    // COMPLETED 상태면 결과 반환
+    if (detail.status === "COMPLETED") {
+      return detail
+    }
+
+    // QUEUED, RUNNING 상태면 계속 대기
+    if (detail.status === "QUEUED" || detail.status === "RUNNING") {
+      await new Promise((resolve) => setTimeout(resolve, pollInterval))
+      continue
+    }
+
+    // 기타 상태 (에러 등)면 즉시 반환
+    return detail
+  }
+
+  // 타임아웃 시 마지막 상태 반환
+  return await orchestratorFetch<OrchestratorSubmissionDetail>(
+    `/api/submissions/${submissionId}`,
+  )
+}
+
 export async function POST(request: Request) {
   const body = (await request.json()) as RunRequest
 

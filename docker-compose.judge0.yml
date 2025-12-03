@@ -9,24 +9,25 @@ services:
       - "2358:2358"
     privileged: true
     environment:
-      - REDIS_HOST=judge0-redis
-      - REDIS_PORT=6379
-      - POSTGRES_HOST=judge0-db
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=judge0
-      - POSTGRES_USER=judge0
-      - POSTGRES_PASSWORD=YourJudge0Password
-      - ENABLE_WAIT_RESULT=true
-      - ENABLE_COMPILER_OPTIONS=true
-      - ALLOWED_LANGUAGES_FOR_COMPILE_OPTIONS=44,45,46,47,48,49,50,51,52,53,54
-      - MAX_QUEUE_SIZE=1000
-      - MAX_CPU_TIME_LIMIT=15
-      - MAX_WALL_TIME_LIMIT=30
-      - MAX_MEMORY_LIMIT=512000
-      - MAX_PROCESSES_AND_OR_THREADS=120
-      - MAX_FILE_SIZE=1024
-      - ENABLE_PER_PROCESS_AND_THREAD_TIME_LIMIT=false
-      - ENABLE_PER_PROCESS_AND_THREAD_MEMORY_LIMIT=false
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+      POSTGRES_HOST: judge0-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: codebrainer
+      POSTGRES_USER: codebrainer
+      POSTGRES_PASSWORD: codebrainer
+      ENABLE_WAIT_RESULT: 'true'
+      ENABLE_COMPILER_OPTIONS: 'true'
+      ALLOWED_LANGUAGES_FOR_COMPILE_OPTIONS: 44,45,46,47,48,49,50,51,52,53,54
+      MAX_QUEUE_SIZE: 1000
+      MAX_CPU_TIME_LIMIT: 15
+      MAX_WALL_TIME_LIMIT: 30
+      MAX_MEMORY_LIMIT: 512000
+      MAX_PROCESSES_AND_OR_THREADS: 120
+      MAX_FILE_SIZE: 1024
+      ENABLE_PER_PROCESS_AND_THREAD_TIME_LIMIT: 'false'
+      ENABLE_PER_PROCESS_AND_THREAD_MEMORY_LIMIT: 'false'
+      JUDGE0_USE_SANDBOX: "false"
     depends_on:
       - judge0-db
       - judge0-redis
@@ -40,19 +41,13 @@ services:
     privileged: true
     command: ["./scripts/workers"]
     environment:
-      - REDIS_HOST=judge0-redis
-      - REDIS_PORT=6379
-      - POSTGRES_HOST=judge0-db
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=judge0
-      - POSTGRES_USER=judge0
-      - POSTGRES_PASSWORD=YourJudge0Password
-      - MAX_QUEUE_SIZE=1000
-      - MAX_CPU_TIME_LIMIT=15
-      - MAX_WALL_TIME_LIMIT=30
-      - MAX_MEMORY_LIMIT=512000
-      - MAX_PROCESSES_AND_OR_THREADS=120
-      - MAX_FILE_SIZE=1024
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+      POSTGRES_HOST: judge0-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: qpwoe1234
     depends_on:
       - judge0-db
       - judge0-redis
@@ -64,9 +59,9 @@ services:
     container_name: judge0-db
     restart: always
     environment:
-      - POSTGRES_DB=judge0
-      - POSTGRES_USER=judge0
-      - POSTGRES_PASSWORD=YourJudge0Password
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: YourJudge0Password
     volumes:
       - judge0-postgres-data:/var/lib/postgresql/data
 

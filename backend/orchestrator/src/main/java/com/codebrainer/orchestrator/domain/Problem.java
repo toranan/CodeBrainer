@@ -1,53 +1,50 @@
 package com.codebrainer.orchestrator.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.ArrayList;
+import lombok.*;
 
 @Entity
 @Table(name = "problems")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Problem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false, unique = true, length = 128)
+    @Column(nullable = true)
     private String slug;
 
-    @Column(nullable = false)
     private String tier;
 
-    @Column(nullable = false)
     private Integer level;
 
-    @Column(name = "time_ms", nullable = false)
+    @Column(name = "time_ms")
     private Integer timeMs;
 
-    @Column(name = "mem_mb", nullable = false)
+    @Column(name = "mem_mb")
     private Integer memMb;
 
     @Column(name = "statement_path")
     private String statementPath;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "categories", columnDefinition = "jsonb")
-    private List<String> categories = new ArrayList<>();
+    @Column(columnDefinition = "jsonb")
+    private List<String> categories;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "languages", columnDefinition = "jsonb")
-    private List<String> languages = new ArrayList<>();
+    @Column(columnDefinition = "jsonb")
+    private List<String> languages;
 
     @Column(columnDefinition = "text")
     private String constraints;
@@ -58,7 +55,6 @@ public class Problem {
     @Column(name = "output_format", columnDefinition = "text")
     private String outputFormat;
 
-    @Column(nullable = false)
     private String visibility;
 
     @Column(name = "is_visible")
@@ -67,10 +63,10 @@ public class Problem {
     @Column(nullable = false)
     private Integer version;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
     public Long getId() {
@@ -217,4 +213,3 @@ public class Problem {
         this.updatedAt = updatedAt;
     }
 }
-

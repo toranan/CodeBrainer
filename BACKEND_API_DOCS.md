@@ -199,6 +199,7 @@ problems (문제)
 **요청:**
 ```http
 GET /api/problems
+GET ProblemListRequest
 ```
 
 **응답:** `200 OK`
@@ -226,6 +227,7 @@ GET /api/problems
 **요청:**
 ```http
 GET /api/problems/{slug}
+GET ProblemRequest
 ```
 
 **Path Parameters:**
@@ -233,6 +235,7 @@ GET /api/problems/{slug}
 
 **응답:** `200 OK`
 ```json
+```ProblemResponse
 {
   "id": 1,
   "slug": "two-sum",

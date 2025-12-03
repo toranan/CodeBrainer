@@ -1,4 +1,4 @@
-version: "3.9"
+# version: "3.9"
 
 services:
   orchestrator:
@@ -23,7 +23,7 @@ services:
       SUPABASE_BUCKET: codebrainer-problems
       JUDGE0_API_URL: http://15.134.39.187:2358
       RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: "5672"
+      RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: guest
       RABBITMQ_PASSWORD: guest
       GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -57,6 +57,7 @@ services:
     image: rabbitmq:3-management
     restart: unless-stopped
     ports:
+      - "5672:5672"
       - "15672:15672"
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "status" ]

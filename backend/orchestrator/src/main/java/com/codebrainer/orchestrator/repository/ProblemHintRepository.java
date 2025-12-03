@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ProblemHintRepository extends JpaRepository<ProblemHint, Long> {
 
-    List<ProblemHint> findAllByProblemOrderByStageAsc(Problem problem);
+    List<ProblemHint> findAllByProblemIdOrderByStageAsc(Long problemId);
+    long countByProblemId(Long problemId);
 
-    void deleteByProblem(Problem problem);
+    void deleteByProblemId(Long problemId);
 }
-

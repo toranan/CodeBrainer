@@ -24,6 +24,11 @@
 .DS_Store
 *.pem
 
+# build artifacts
+/backend/extracted/
+backend/*.jar
+backend/*.zip
+
 # debug
 npm-debug.log*
 yarn-debug.log*

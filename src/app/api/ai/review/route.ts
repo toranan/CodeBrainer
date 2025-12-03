@@ -87,11 +87,45 @@ function parseReviewContent(reviewContent: string, code: string, language: strin
 export async function POST(request: Request) {
   const body = (await request.json()) as ReviewRequest
 
-  if (!body.userCode || !body.language || !body.problemId) {
-    return NextResponse.json(
-      { error: "userCode, language, problemId는 필수입니다." },
-      { status: 400 }
-    )
+  // submissionId가 있으면 해당 제출에 대한 리뷰 조회/생성
+  if (body.submissionId) {
+    try {
+      let codeReview: CodeReviewResponse
+
+      try {
+        // 기존 리뷰 조회
+        codeReview = await orchestratorFetch<CodeReviewResponse>(
+          `/api/code-reviews/submissions/${body.submissionId}`
+        )
+      } catch (error) {
+        // 리뷰가 없으면 생성
+        console.log("리뷰가 없어 새로 생성합니다:", body.submissionId)
+        codeReview = await orchestratorFetch<CodeReviewResponse>(
+          `/api/code-reviews/submissions/${body.submissionId}`,
+          {
+            method: "POST",
+          }
+        )
+      }
+
+      // 리뷰 텍스트 파싱 → FE 형식 변환
+      const parsedReview = parseReviewContent(
+        codeReview.reviewContent,
+        body.userCode,
+        body.language
+      )
+
+      return NextResponse.json(parsedReview)
+    } catch (error) {
+      console.error("코드 리뷰 조회/생성 오류:", error)
+      return NextResponse.json(
+        {
+          error: "AI 리뷰를 가져오는데 실패했습니다.",
+          details: error instanceof Error ? error.message : String(error),
+        },
+        { status: 500 }
+      )
+    }
   }
 
   // submissionId가 있으면 해당 제출에 대한 리뷰 조회/생성
