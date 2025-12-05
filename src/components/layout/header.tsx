@@ -72,7 +72,7 @@ export function Header() {
         </Link>
         <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
           <ProblemHoverMenu />
-          <Link href="/mock" className="hover:text-primary">모의고사</Link>
+          <Link href="/problems/mock-exam" className="hover:text-primary">모의고사</Link>
           {user?.role === "ADMIN" && (
             <Link href="/admin" className="hover:text-primary text-orange-600 font-semibold">
               관리자 콘솔

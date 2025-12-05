@@ -55,7 +55,9 @@ export default async function PlatinumProblemsPage() {
                     </Link>
                   </CardTitle>
                   <CardDescription className="text-sm text-slate-600">
-                    {truncate(problem.statement.replace(/\n+/g, " "), 120)}
+                    {problem.statement
+                      ? truncate(problem.statement.replace(/\n+/g, " "), 120)
+                      : "문제 설명을 확인하려면 클릭하세요"}
                   </CardDescription>
                 </div>
                 <div className="flex flex-col items-end gap-2 text-right text-xs text-slate-500">
