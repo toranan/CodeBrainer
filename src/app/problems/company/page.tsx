@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import { toast } from "sonner"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -30,6 +33,11 @@ export default function CompanySelectPage() {
     },
   ]
 
+  const handleCompanyClick = (companyName: string) => (e: React.MouseEvent) => {
+    e.preventDefault()
+    toast(`${companyName} 기출문제는 준비중입니다.`)
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 py-10">
       <header className="space-y-4">
@@ -41,7 +49,7 @@ export default function CompanySelectPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {companies.map((company) => (
-          <Link key={company.path} href={company.path}>
+          <Link key={company.path} href={company.path} onClick={handleCompanyClick(company.name)}>
             <Card className={`border-2 ${company.borderColor} ${company.bgColor} transition hover:shadow-xl hover:scale-105 cursor-pointer h-full`}>
               <CardHeader>
                 <div className="flex items-center gap-3">

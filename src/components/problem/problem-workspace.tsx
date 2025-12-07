@@ -490,12 +490,12 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           </div>
           <div className="flex flex-col items-end gap-2 text-right text-xs text-slate-500">
             <Button
-              variant={aiAssistMode ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => setAiAssistMode(!aiAssistMode)}
+              onClick={() => toast("사용자 실시간 소통 AI 보조모드는 아직 준비중입니다.")}
               className="mb-2"
             >
-              {aiAssistMode ? "🤖 AI 보조모드 ON" : "🤖 AI 보조모드 OFF"}
+              🤖 AI 보조모드
             </Button>
             <span>지원 언어 {problem.languages.length}종</span>
             <span>최종 수정 {new Date(problem.updatedAt).toLocaleDateString()}</span>
