@@ -11,6 +11,7 @@ function truncate(text: string, maxLength: number) {
   return `${text.slice(0, maxLength)}…`
 }
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 0; // 항상 최신 데이터 표시
 export default async function BronzeProblemsPage() {
   const problems = await fetchProblemSummaries()
