@@ -11,7 +11,7 @@ function truncate(text: string, maxLength: number) {
   return `${text.slice(0, maxLength)}…`
 }
 
-export const revalidate = 7200; // 2시간마다 갱신
+export const revalidate = 0; // 항상 최신 데이터 표시
 
 export default async function SilverProblemsPage() {
   const problems = await fetchProblemSummaries()
