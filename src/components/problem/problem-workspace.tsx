@@ -89,11 +89,23 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
   const [reviewState, setReviewState] = useState<ReviewState>({ status: "idle" });
   const [authUser, setAuthUser] = useState<{ userId: string; token: string | null } | null>(null);
 
+  // 페이지 진입 시간 (컴포넌트 마운트 시 한 번만 설정)
+  const [entryTime] = useState(Date.now());
+
   const [hintStates, setHintStates] = useState<Record<number, HintState>>(() => {
     const initial: Record<number, HintState> = {};
+    const now = Date.now();
+
     problem.hints.forEach((hint) => {
-      initial[hint.stage] = { status: "locked" };
+      // 각 힌트의 unlockTime = 입장 시간 + 대기 시간
+      const unlockTime = now + hint.waitSeconds * 1000;
+
+      initial[hint.stage] = {
+        status: hint.waitSeconds > 0 ? "cooldown" : "locked",
+        nextAvailable: unlockTime,
+      };
     });
+
     return initial;
   });
 
@@ -139,7 +151,29 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
       return;
     }
 
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => {
+      const currentTime = Date.now();
+      setNow(currentTime);
+
+      // 시간이 지난 힌트를 locked 상태로 변경
+      setHintStates((prev) => {
+        const updated = { ...prev };
+        let hasChanges = false;
+
+        Object.keys(updated).forEach((key) => {
+          const stage = parseInt(key);
+          const state = updated[stage];
+
+          if (state.status === "cooldown" && state.nextAvailable && currentTime >= state.nextAvailable) {
+            updated[stage] = { status: "locked" };
+            hasChanges = true;
+          }
+        });
+
+        return hasChanges ? updated : prev;
+      });
+    }, 1000);
+
     return () => clearInterval(timer);
   }, [hintStates]);
 
