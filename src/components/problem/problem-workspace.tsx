@@ -869,7 +869,7 @@ const SectionContentHints = ({
               <Button
                 size="sm"
                 variant={isUnlocked ? "subtle" : "default"}
-                disabled={state.status === "loading" || isUnlocked}
+                disabled={state.status === "loading" || state.status === "cooldown" || isUnlocked}
                 onClick={() => onOpenHint(hint)}
               >
                 {state.status === "loading"
