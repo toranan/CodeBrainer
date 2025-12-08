@@ -335,8 +335,6 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
         },
         body: JSON.stringify({
           problemId: problem.id,
-          language,
-          userCode: currentCode,
           submissionId,
         }),
       });
