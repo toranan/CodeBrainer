@@ -176,7 +176,7 @@ export async function POST(request: Request) {
       )
 
       // Orchestrator 응답을 프론트엔드 형식으로 변환
-      const response = formatOrchestratorResponse(orchestratorDetail, problem.testcases)
+      const responseData = formatOrchestratorResponse(orchestratorDetail, problem.testcases)
 
       // AI 보조모드가 활성화되어 있고, 틀렸을 때 힌트 생성
       // status는 완료되면 항상 "COMPLETED"이므로 result.summary의 verdict를 확인해야 함
@@ -214,7 +214,6 @@ export async function POST(request: Request) {
           if (hintResponse.ok) {
             const hintData = await hintResponse.json()
             // 힌트를 응답에 추가
-            const responseData = await response.json()
             return NextResponse.json({
               ...responseData,
               aiHint: hintData,
@@ -226,7 +225,7 @@ export async function POST(request: Request) {
         }
       }
 
-      return response
+      return NextResponse.json(responseData)
     } catch (error) {
       console.error("Orchestrator 제출 오류:", error)
       return NextResponse.json(
@@ -314,13 +313,13 @@ export async function POST(request: Request) {
 function formatOrchestratorResponse(
   detail: OrchestratorSubmissionDetail,
   testcases: Array<{ id: string }>,
-): NextResponse {
+) {
   if (!detail.result) {
-    return NextResponse.json({
+    return {
       status: detail.status,
       results: [],
       compileLog: null,
-    })
+    }
   }
 
   // JSON 문자열 파싱
@@ -370,10 +369,10 @@ function formatOrchestratorResponse(
     finalStatus = "MLE"
   }
 
-  return NextResponse.json({
+  return {
     status: finalStatus,
     results,
     compileLog: detail.result.compile.message ?? undefined,
     submissionId: detail.submissionId,
-  })
+  }
 }
