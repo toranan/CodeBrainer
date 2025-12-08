@@ -36,11 +36,9 @@ public class CodeReviewController {
     @PostMapping("/submissions/{submissionId}")
     public ResponseEntity<?> createReview(
             @PathVariable("submissionId") Long submissionId,
-            @RequestBody(required = false) CodeReviewRequest request) {
+            @RequestParam(value = "mode", required = false, defaultValue = "review") String mode) {
         try {
-            String mode = request != null && request.mode != null ? request.mode : "review";
             log.info("Generating {} for submission: {}", mode, submissionId);
-            log.info("Request: {}", request);
             CodeReviewResponse review = codeReviewService.generateReview(submissionId, mode);
             return ResponseEntity.status(HttpStatus.CREATED).body(review);
         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -54,12 +52,6 @@ public class CodeReviewController {
                     new ErrorResponse("코드 리뷰 생성 중 오류가 발생했습니다.")
             );
         }
-    }
-
-    /**
-     * 코드 리뷰 요청 DTO
-     */
-    private record CodeReviewRequest(String mode, String verdict) {
     }
 
     /**

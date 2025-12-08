@@ -65,10 +65,6 @@ export interface JudgeRunResponse {
   results: SubmissionResultItem[];
   compileLog?: string;
   submissionId?: number;
-  aiHint?: {
-    hints: string[];
-    suggestions: string[];
-  };
 }
 
 export interface HintOpenResponse {

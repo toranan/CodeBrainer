@@ -176,26 +176,10 @@ export async function POST(request: Request) {
       )
 
       // Orchestrator 응답을 프론트엔드 형식으로 변환
-      const responseData = formatOrchestratorResponse(orchestratorDetail, problem.testcases)
+      const response = formatOrchestratorResponse(orchestratorDetail, problem.testcases)
 
       // AI 보조모드가 활성화되어 있고, 틀렸을 때 힌트 생성
-      // status는 완료되면 항상 "COMPLETED"이므로 result.summary의 verdict를 확인해야 함
-      let shouldGenerateHint = false
-      let actualVerdict = "UNKNOWN"
-
-      if (body.aiAssistMode && orchestratorDetail.result) {
-        try {
-          const summary = typeof orchestratorDetail.result.summary === "string"
-            ? JSON.parse(orchestratorDetail.result.summary)
-            : orchestratorDetail.result.summary
-          actualVerdict = summary.verdict || "UNKNOWN"
-          shouldGenerateHint = actualVerdict !== "AC"
-        } catch (e) {
-          console.error("verdict 파싱 오류:", e)
-        }
-      }
-
-      if (shouldGenerateHint) {
+      if (body.aiAssistMode && orchestratorDetail.status !== "COMPLETED") {
         try {
           const hintResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai/hint`, {
             method: "POST",
@@ -207,7 +191,7 @@ export async function POST(request: Request) {
               userCode: body.code,
               language: languageUpper,
               problemId: body.problemId,
-              verdict: actualVerdict,
+              verdict: orchestratorDetail.status,
             }),
           })
 
@@ -215,7 +199,7 @@ export async function POST(request: Request) {
             const hintData = await hintResponse.json()
             // 힌트를 응답에 추가
             return NextResponse.json({
-              ...responseData,
+              ...response.json(), // Extract the JSON body from the NextResponse
               aiHint: hintData,
             })
           }
@@ -225,7 +209,7 @@ export async function POST(request: Request) {
         }
       }
 
-      return NextResponse.json(responseData)
+      return response
     } catch (error) {
       console.error("Orchestrator 제출 오류:", error)
       return NextResponse.json(
@@ -313,13 +297,13 @@ export async function POST(request: Request) {
 function formatOrchestratorResponse(
   detail: OrchestratorSubmissionDetail,
   testcases: Array<{ id: string }>,
-) {
+): NextResponse {
   if (!detail.result) {
-    return {
+    return NextResponse.json({
       status: detail.status,
       results: [],
       compileLog: null,
-    }
+    })
   }
 
   // JSON 문자열 파싱
@@ -369,10 +353,10 @@ function formatOrchestratorResponse(
     finalStatus = "MLE"
   }
 
-  return {
+  return NextResponse.json({
     status: finalStatus,
     results,
     compileLog: detail.result.compile.message ?? undefined,
     submissionId: detail.submissionId,
-  }
+  })
 }

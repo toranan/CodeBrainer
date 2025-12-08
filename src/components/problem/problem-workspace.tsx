@@ -316,37 +316,7 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
         toast.success("정답입니다! AI 리뷰를 준비중이에요.");
         await fetchAiReview(data.submissionId);
       } else {
-        // AI 보조모드가 활성화되어 있고 힌트를 받았으면 표시
-        if (aiAssistMode && data.aiHint) {
-          const hintMessage = (
-            <div className="space-y-2">
-              <p className="font-semibold">🤖 AI 힌트</p>
-              {data.aiHint.hints.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium">문제점 분석:</p>
-                  <ul className="list-disc list-inside text-xs space-y-0.5">
-                    {data.aiHint.hints.map((hint, i) => (
-                      <li key={i}>{hint}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {data.aiHint.suggestions.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium">다시 생각해볼 점:</p>
-                  <ul className="list-disc list-inside text-xs space-y-0.5">
-                    {data.aiHint.suggestions.map((suggestion, i) => (
-                      <li key={i}>{suggestion}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          );
-          toast(hintMessage, { duration: 10000 });
-        } else {
-          toast("정답이 아닙니다. 결과 패널을 확인하세요.");
-        }
+        toast("정답이 아닙니다. 결과 패널을 확인하세요.");
       }
     } catch (error) {
       console.error(error);
@@ -520,15 +490,12 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           </div>
           <div className="flex flex-col items-end gap-2 text-right text-xs text-slate-500">
             <Button
-              variant={aiAssistMode ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => {
-                setAiAssistMode(!aiAssistMode);
-                toast.success(aiAssistMode ? "AI 보조모드를 비활성화했습니다." : "AI 보조모드를 활성화했습니다. 틀린 답안 제출 시 힌트를 받을 수 있습니다.");
-              }}
+              onClick={() => toast("사용자 실시간 소통 AI 보조모드는 아직 준비중입니다.")}
               className="mb-2"
             >
-              🤖 AI 보조모드 {aiAssistMode ? "ON" : "OFF"}
+              🤖 AI 보조모드
             </Button>
             <span>지원 언어 {problem.languages.length}종</span>
             <span>최종 수정 {new Date(problem.updatedAt).toLocaleDateString()}</span>
