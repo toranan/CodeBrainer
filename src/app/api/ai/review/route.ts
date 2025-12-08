@@ -87,9 +87,9 @@ function parseReviewContent(reviewContent: string, code: string, language: strin
 export async function POST(request: Request) {
   const body = (await request.json()) as ReviewRequest
 
-  if (!body.problemId) {
+  if (!body.userCode || !body.language || !body.problemId) {
     return NextResponse.json(
-      { error: "problemId는 필수입니다." },
+      { error: "userCode, language, problemId는 필수입니다." },
       { status: 400 }
     )
   }
@@ -97,32 +97,7 @@ export async function POST(request: Request) {
   // submissionId가 있으면 해당 제출에 대한 리뷰 조회/생성
   if (body.submissionId) {
     try {
-      // 제출 정보 조회하여 실제 제출된 코드와 언어 가져오기
-      let submissionData: { code: string; language: string }
-
-      try {
-        const submissionResponse = await orchestratorFetch<{
-          code: string
-          language: string
-          status: string
-        }>(`/api/submissions/${body.submissionId}`)
-
-        submissionData = {
-          code: submissionResponse.code,
-          language: submissionResponse.language,
-        }
-      } catch (error) {
-        console.error("제출 정보 조회 실패:", error)
-        return NextResponse.json(
-          {
-            error: "제출 정보를 가져오는데 실패했습니다.",
-            details: error instanceof Error ? error.message : String(error),
-          },
-          { status: 500 }
-        )
-      }
-
-      // 코드 리뷰 조회/생성
+      // 먼저 기존 리뷰가 있는지 확인
       let codeReview: CodeReviewResponse
 
       try {
@@ -141,11 +116,10 @@ export async function POST(request: Request) {
       }
 
       // Gemini 리뷰 텍스트를 프론트엔드 형식으로 변환
-      // 실제 제출된 코드를 사용
       const parsedReview = parseReviewContent(
         codeReview.reviewContent,
-        submissionData.code,
-        submissionData.language
+        body.userCode,
+        body.language
       )
 
       return NextResponse.json(parsedReview)
@@ -170,8 +144,8 @@ export async function POST(request: Request) {
       "코드를 제출하면 더 자세한 피드백을 받을 수 있습니다.",
     ],
     finalSolution: {
-      language: body.language || "PYTHON",
-      code: body.userCode || "",
+      language: body.language,
+      code: body.userCode,
       notes: "제출 후 AI 리뷰를 받으세요.",
     },
   })
