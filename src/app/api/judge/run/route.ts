@@ -179,7 +179,23 @@ export async function POST(request: Request) {
       const response = formatOrchestratorResponse(orchestratorDetail, problem.testcases)
 
       // AI 보조모드가 활성화되어 있고, 틀렸을 때 힌트 생성
-      if (body.aiAssistMode && orchestratorDetail.status !== "COMPLETED") {
+      // status는 완료되면 항상 "COMPLETED"이므로 result.summary의 verdict를 확인해야 함
+      let shouldGenerateHint = false
+      let actualVerdict = "UNKNOWN"
+
+      if (body.aiAssistMode && orchestratorDetail.result) {
+        try {
+          const summary = typeof orchestratorDetail.result.summary === "string"
+            ? JSON.parse(orchestratorDetail.result.summary)
+            : orchestratorDetail.result.summary
+          actualVerdict = summary.verdict || "UNKNOWN"
+          shouldGenerateHint = actualVerdict !== "AC"
+        } catch (e) {
+          console.error("verdict 파싱 오류:", e)
+        }
+      }
+
+      if (shouldGenerateHint) {
         try {
           const hintResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai/hint`, {
             method: "POST",
@@ -191,15 +207,16 @@ export async function POST(request: Request) {
               userCode: body.code,
               language: languageUpper,
               problemId: body.problemId,
-              verdict: orchestratorDetail.status,
+              verdict: actualVerdict,
             }),
           })
 
           if (hintResponse.ok) {
             const hintData = await hintResponse.json()
             // 힌트를 응답에 추가
+            const responseData = await response.json()
             return NextResponse.json({
-              ...response.json(), // Extract the JSON body from the NextResponse
+              ...responseData,
               aiHint: hintData,
             })
           }
