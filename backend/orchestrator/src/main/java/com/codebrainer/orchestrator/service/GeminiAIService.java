@@ -82,24 +82,52 @@ public class GeminiAIService {
 
             log.debug("Sending request to Gemini API: {}", apiUrl);
             
-            // byte[]로 받아서 직접 String 변환 (RestTemplate JSON 파싱 우회)
-            ResponseEntity<byte[]> response = restTemplate.exchange(
-                apiUrl, 
-                org.springframework.http.HttpMethod.POST, 
-                request, 
-                byte[].class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                // byte[]를 UTF-8 String으로 직접 변환
-                String responseBody = new String(response.getBody(), java.nio.charset.StandardCharsets.UTF_8);
-                log.info("=== Gemini API Response ===");
-                log.info("Response length: {} characters", responseBody.length());
-                log.info("Response body (first 500 chars): {}", responseBody.substring(0, Math.min(500, responseBody.length())));
-                
-                return extractReviewFromResponse(responseBody);
+            // HttpURLConnection으로 직접 호출 (RestTemplate 문제 우회)
+            java.net.URL url = new java.net.URL(apiUrl);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(60000);
+            
+            // Request body 작성
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
+            try (java.io.OutputStream os = conn.getOutputStream()) {
+                byte[] input = jsonBody.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+            
+            int responseCode = conn.getResponseCode();
+            log.info("Gemini API response code: {}", responseCode);
+            
+            if (responseCode >= 200 && responseCode < 300) {
+                // 응답 읽기
+                try (java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                    StringBuilder responseBuilder = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        responseBuilder.append(line);
+                    }
+                    String responseBody = responseBuilder.toString();
+                    log.info("=== Gemini API Response ===");
+                    log.info("Response length: {} characters", responseBody.length());
+                    log.info("Response body (first 500 chars): {}", responseBody.substring(0, Math.min(500, responseBody.length())));
+                    
+                    return extractReviewFromResponse(responseBody);
+                }
             } else {
-                log.error("Gemini API returned non-success status: {}", response.getStatusCode());
+                // 에러 응답 읽기
+                try (java.io.BufferedReader br = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(conn.getErrorStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                    StringBuilder errorBuilder = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        errorBuilder.append(line);
+                    }
+                    log.error("Gemini API error response: {}", errorBuilder.toString());
+                }
                 return "AI 코드 리뷰 생성에 실패했습니다.";
             }
 
