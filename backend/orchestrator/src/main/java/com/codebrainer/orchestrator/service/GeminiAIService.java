@@ -55,7 +55,7 @@ public class GeminiAIService {
      * @param problemId 문제 ID
      * @return AI 생성 코드 리뷰 텍스트
      */
-    public String generateCodeReview(String code, String problemTitle, String problemStatement, String languageId, Long problemId) {
+    public String generateCodeReview(String code, String problemTitle, String problemStatement, String languageId, Long problemId, List<String> categories) {
         if (!geminiProperties.isEnabled()) {
             log.warn("Gemini AI is disabled. Skipping code review generation.");
             return "AI 코드 리뷰 기능이 비활성화되어 있습니다.";
@@ -67,7 +67,7 @@ public class GeminiAIService {
         }
 
         try {
-            String prompt = buildReviewPrompt(code, problemTitle, problemStatement, languageId, problemId);
+            String prompt = buildReviewPrompt(code, problemTitle, problemStatement, languageId, problemId, categories);
             String apiUrl = String.format(GEMINI_API_URL, geminiProperties.getModel()) + "?key=" + geminiProperties.getApiKey();
 
             HttpHeaders headers = new HttpHeaders();
@@ -107,7 +107,7 @@ public class GeminiAIService {
      * @param verdict 제출 결과 (WA, TLE, RE 등)
      * @return AI 생성 힌트 텍스트
      */
-    public String generateHint(String code, String problemTitle, String problemStatement, String languageId, Long problemId, String verdict) {
+    public String generateHint(String code, String problemTitle, String problemStatement, String languageId, Long problemId, String verdict, List<String> categories) {
         if (!geminiProperties.isEnabled()) {
             log.warn("Gemini AI is disabled. Skipping hint generation.");
             return "AI 힌트 기능이 비활성화되어 있습니다.";
@@ -119,7 +119,7 @@ public class GeminiAIService {
         }
 
         try {
-            String prompt = buildHintPrompt(code, problemTitle, problemStatement, languageId, problemId, verdict);
+            String prompt = buildHintPrompt(code, problemTitle, problemStatement, languageId, problemId, verdict, categories);
             String apiUrl = String.format(GEMINI_API_URL, geminiProperties.getModel()) + "?key=" + geminiProperties.getApiKey();
 
             HttpHeaders headers = new HttpHeaders();
@@ -152,7 +152,7 @@ public class GeminiAIService {
      * 코드 리뷰를 위한 프롬프트를 생성합니다.
      * DB에 저장된 정답 코드를 사용자 언어로 변환합니다.
      */
-    private String buildReviewPrompt(String code, String problemTitle, String problemStatement, String languageId, Long problemId) {
+    private String buildReviewPrompt(String code, String problemTitle, String problemStatement, String languageId, Long problemId, List<String> categories) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("당신은 알고리즘 전문 코드 리뷰어입니다. 다음 문제에 대한 제출 코드를 평가해주세요.\n\n");
         prompt.append("# 문제: ").append(problemTitle).append("\n\n");
@@ -162,6 +162,13 @@ public class GeminiAIService {
         }
 
         prompt.append("# 프로그래밍 언어: ").append(languageId).append("\n\n");
+        
+        // 알고리즘 카테고리 추가
+        if (categories != null && !categories.isEmpty()) {
+            prompt.append("# 🎯 요구 알고리즘 (출제의도): ").append(String.join(", ", categories)).append("\n");
+            prompt.append("⚠️ 이 문제는 위 알고리즘을 사용해야 하는 문제입니다!\n\n");
+        }
+        
         prompt.append("# 제출된 코드:\n```").append(languageId).append("\n");
         prompt.append(code).append("\n```\n\n");
 
@@ -269,7 +276,7 @@ public class GeminiAIService {
      * 힌트를 위한 프롬프트를 생성합니다.
      * 정답 코드를 포함하지 않고, 방향성만 제시합니다.
      */
-    private String buildHintPrompt(String code, String problemTitle, String problemStatement, String languageId, Long problemId, String verdict) {
+    private String buildHintPrompt(String code, String problemTitle, String problemStatement, String languageId, Long problemId, String verdict, List<String> categories) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("당신은 코딩 교육 AI 튜터입니다. 학생이 문제를 틀렸습니다.\n");
         prompt.append("정답 코드는 **절대** 알려주지 말고, 스스로 해결할 수 있도록 힌트만 제공하세요.\n\n");
@@ -281,6 +288,13 @@ public class GeminiAIService {
         }
 
         prompt.append("# 프로그래밍 언어: ").append(languageId).append("\n");
+        
+        // 알고리즘 카테고리 추가
+        if (categories != null && !categories.isEmpty()) {
+            prompt.append("# 🎯 요구 알고리즘 (출제의도): ").append(String.join(", ", categories)).append("\n");
+            prompt.append("⚠️ 이 문제는 위 알고리즘을 사용해야 하는 문제입니다!\n\n");
+        }
+        
         prompt.append("# 제출 결과: ").append(verdict).append("\n\n");
         
         prompt.append("# 학생의 제출 코드:\n```").append(languageId).append("\n");

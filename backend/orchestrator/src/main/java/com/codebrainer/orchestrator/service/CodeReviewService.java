@@ -117,7 +117,8 @@ public class CodeReviewService {
                     problemStatement,
                     submission.getLanguageId(),
                     problem.getId(),
-                    submission.getStatus().name()
+                    submission.getStatus().name(),
+                    problem.getCategories()
             );
         } else {
             reviewContent = geminiAIService.generateCodeReview(
@@ -125,7 +126,8 @@ public class CodeReviewService {
                     problem.getTitle(),
                     problemStatement,
                     submission.getLanguageId(),
-                    problem.getId()
+                    problem.getId(),
+                    problem.getCategories()
             );
         }
 
