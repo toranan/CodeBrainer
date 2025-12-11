@@ -82,19 +82,20 @@ public class GeminiAIService {
 
             log.debug("Sending request to Gemini API: {}", apiUrl);
             
-            // exchange() 사용으로 더 안전한 응답 처리
-            ResponseEntity<String> response = restTemplate.exchange(
+            // byte[]로 받아서 직접 String 변환 (RestTemplate JSON 파싱 우회)
+            ResponseEntity<byte[]> response = restTemplate.exchange(
                 apiUrl, 
                 org.springframework.http.HttpMethod.POST, 
                 request, 
-                String.class
+                byte[].class
             );
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                String responseBody = response.getBody();
+                // byte[]를 UTF-8 String으로 직접 변환
+                String responseBody = new String(response.getBody(), java.nio.charset.StandardCharsets.UTF_8);
                 log.info("=== Gemini API Response ===");
                 log.info("Response length: {} characters", responseBody.length());
-                log.info("Response body: {}", responseBody.substring(0, Math.min(500, responseBody.length())));
+                log.info("Response body (first 500 chars): {}", responseBody.substring(0, Math.min(500, responseBody.length())));
                 
                 return extractReviewFromResponse(responseBody);
             } else {
