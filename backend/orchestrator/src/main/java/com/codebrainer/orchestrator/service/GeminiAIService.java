@@ -198,7 +198,17 @@ public class GeminiAIService {
 
             prompt.append("## 1. 출제의도 부합 여부 (필수)\n");
             prompt.append("제출 코드가 **출제의도에 부합**하는지 먼저 평가하세요:\n");
-            prompt.append("- 문제 설명에 명시된 알고리즘 카테고리(예: 완전탐색, DP, 그리디 등)에 맞는 접근 방식을 사용했는지 확인\n");
+            
+            // 카테고리가 있을 때 더 엄격한 체크
+            if (categories != null && !categories.isEmpty()) {
+                prompt.append("- ⚠️ **중요**: 위에 명시된 \"요구 알고리즘\"을 **실제로 코드에서 사용했는지** 확인하세요\n");
+                prompt.append("- 예시: \"힙\" 카테고리면 → heapq, PriorityQueue, heap 등의 자료구조를 **반드시** 사용해야 함\n");
+                prompt.append("- 예시: \"스택\" 카테고리면 → stack, 배열+pop/push 패턴을 **반드시** 사용해야 함\n");
+                prompt.append("- 정답이더라도 요구 알고리즘을 사용하지 않았으면 \"⚠️ 출제의도와 다른 접근\"으로 평가\n");
+            } else {
+                prompt.append("- 문제 설명에 명시된 알고리즘 카테고리(예: 완전탐색, DP, 그리디 등)에 맞는 접근 방식을 사용했는지 확인\n");
+            }
+            
             prompt.append("- 출제의도에 부합하면: \"✅ 출제의도에 부합합니다.\" 라고 명시\n");
             prompt.append("- 부합하지 않으면: \"⚠️ 출제의도와 다른 접근을 사용했습니다.\" 라고 명시하고 이유 설명\n\n");
 
