@@ -81,10 +81,22 @@ public class GeminiAIService {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
             log.debug("Sending request to Gemini API: {}", apiUrl);
-            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, request, String.class);
+            
+            // exchange() 사용으로 더 안전한 응답 처리
+            ResponseEntity<String> response = restTemplate.exchange(
+                apiUrl, 
+                org.springframework.http.HttpMethod.POST, 
+                request, 
+                String.class
+            );
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return extractReviewFromResponse(response.getBody());
+                String responseBody = response.getBody();
+                log.info("=== Gemini API Response ===");
+                log.info("Response length: {} characters", responseBody.length());
+                log.info("Response body: {}", responseBody.substring(0, Math.min(500, responseBody.length())));
+                
+                return extractReviewFromResponse(responseBody);
             } else {
                 log.error("Gemini API returned non-success status: {}", response.getStatusCode());
                 return "AI 코드 리뷰 생성에 실패했습니다.";
