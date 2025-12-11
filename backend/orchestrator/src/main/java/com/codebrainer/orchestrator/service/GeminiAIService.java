@@ -27,7 +27,7 @@ import java.util.Optional;
 public class GeminiAIService {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiAIService.class);
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
+    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/%s:generateContent";
 
     private final GeminiProperties geminiProperties;
     private final RestTemplate restTemplate;
