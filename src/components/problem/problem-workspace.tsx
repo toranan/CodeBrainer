@@ -314,6 +314,29 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
 
       if (data.status === "AC") {
         toast.success("정답입니다! AI 리뷰를 준비중이에요.");
+
+        // 모의고사 모드에서 정답 처리 시 completedProblems 업데이트
+        if (typeof window !== "undefined") {
+          const urlParams = new URLSearchParams(window.location.search);
+          const examId = urlParams.get("exam");
+
+          if (examId) {
+            const storedExam = localStorage.getItem("currentMockExam");
+            if (storedExam) {
+              try {
+                const examData = JSON.parse(storedExam);
+                // 이미 완료된 문제가 아니면 추가
+                if (!examData.completedProblems.includes(problem.slug)) {
+                  examData.completedProblems.push(problem.slug);
+                  localStorage.setItem("currentMockExam", JSON.stringify(examData));
+                }
+              } catch (err) {
+                console.error("모의고사 데이터 업데이트 실패:", err);
+              }
+            }
+          }
+        }
+
         await fetchAiReview(data.submissionId);
       } else {
         toast("정답이 아닙니다. 결과 패널을 확인하세요.");
