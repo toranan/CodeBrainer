@@ -64,6 +64,12 @@ function getDifficultyColor(difficulty: string) {
 
 export default function MockExamPage() {
   const handleStartExam = (examId: string) => {
+    // 심화 도전은 수정 중
+    if (examId === "advanced-90") {
+      alert("⚠️ 수정 중입니다\n\n심화 도전 90분 모의고사는 현재 오류 수정 중입니다.\n조금만 기다려주세요!");
+      return;
+    }
+
     // 모의고사 시작 - 문제 세트와 시작 시간을 localStorage에 저장
     const exam = mockExamSets.find((e) => e.id === examId);
     if (!exam) return;
@@ -80,7 +86,7 @@ export default function MockExamPage() {
     };
 
     localStorage.setItem("currentMockExam", JSON.stringify(examData));
-    
+
     // 첫 번째 문제로 이동
     window.location.href = `/problems/${exam.problems[0].slug}?exam=${examId}`;
   };
@@ -92,8 +98,8 @@ export default function MockExamPage() {
           <Link href="/problems" className="text-sm text-primary hover:underline">
             ← 문제 목록으로 돌아가기
           </Link>
-          <Link 
-            href="/problems/mock-exam/result" 
+          <Link
+            href="/problems/mock-exam/result"
             className="text-sm text-slate-600 hover:text-primary hover:underline"
           >
             이전 결과 보기 →
@@ -101,7 +107,7 @@ export default function MockExamPage() {
         </div>
         <h1 className="text-3xl font-semibold text-slate-900">실전 모의고사</h1>
         <p className="text-slate-600">
-          실제 코딩 테스트처럼 시간 제한이 있는 모의고사입니다. 
+          실제 코딩 테스트처럼 시간 제한이 있는 모의고사입니다.
           제한 시간 내에 최대한 많은 문제를 해결해보세요!
         </p>
       </header>
