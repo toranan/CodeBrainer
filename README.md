@@ -1,253 +1,207 @@
-# CodeBrainer - 알고리즘 학습 플랫폼
+# 🧠 CodeBrainer
 
-알고리즘 문제 풀이, 모의고사, AI 코드 리뷰까지 제공하는 프로그래밍 학습 플랫폼입니다.
+> AI 기반 알고리즘 학습 플랫폼 - 문제 풀이부터 AI 코드 리뷰까지
 
-## 🚀 기술 스택
+[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2-brightgreen)](https://spring.io/projects/spring-boot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+CodeBrainer는 알고리즘 문제 풀이, 실시간 채점, AI 코드 리뷰 및 힌트 제공 기능을 갖춘 통합 학습 플랫폼입니다.
+
+🔗 **Live Demo**: [code-brainer.vercel.app](https://code-brainer.vercel.app)
+
+---
+
+## ✨ 주요 기능
+
+### � 문제 풀이
+- **실시간 코드 에디터** (Monaco Editor) - Python, Java, C++, JavaScript 등 다양한 언어 지원
+- **즉시 채점** - Judge0 엔진 기반 빠르고 정확한 코드 실행
+- **상세한 피드백** - 테스트 케이스별 결과, 실행 시간, 메모리 사용량
+
+### 🤖 AI 보조 모드
+- **AI 코드 리뷰** (Gemini API) - 정답 제출 시 코드 품질 분석 및 개선점 제안
+- **AI 힌트** - 오답 시 정답 코드 없이 방향성만 제시하는 맞춤형 힌트
+- **출제 의도 분석** - 문제가 요구하는 알고리즘 카테고리 준수 여부 검증
+
+### 📊 학습 관리
+- **마이페이지** - 제출 이력, 해결 문제, 추천 알고리즘 통계
+- **모의고사** - 난이도별 시간 제한 문제 세트
+- **진행 상황 추적** - 문제별 정답률, 언어별 제출 통계
+
+---
+
+## 🛠️ 기술 스택
 
 ### Frontend
-- **Next.js 15** - React 프레임워크
+- **Next.js 15** - React 프레임워크, App Router
 - **TypeScript** - 타입 안정성
-- **Tailwind CSS** - 스타일링
-- **NextAuth.js** - 인증 (OAuth 지원)
+- **Tailwind CSS** - 유틸리티 기반 스타일링
+- **Monaco Editor** - VS Code 기반 코드 에디터
+- **React Query** - 서버 상태 관리
 
 ### Backend
-- **Spring Boot 3.2.0** - Java 백엔드 프레임워크
-- **Spring Security** - 인증/인가
-- **Spring Data JPA** - ORM
-- **JWT** - 토큰 기반 인증
-- **PostgreSQL** - 데이터베이스
-- **Gradle** - 빌드 도구
+- **Spring Boot 3.2** - Java 백엔드 프레임워크
+- **Spring Data JPA** - ORM, Hibernate
+- **PostgreSQL** - 관계형 데이터베이스
+- **Supabase Storage** - 문제 파일 및 테스트 케이스 저장
 
-## 📋 주요 기능
+### 코드 채점 & AI
+- **[Judge0](https://github.com/judge0/judge0)** (MIT License) - 코드 실행 및 채점 엔진
+- **Google Gemini API** - AI 코드 리뷰 및 힌트 생성
 
-### ✅ 구현 완료
-- **회원가입/로그인**
-  - 이메일/비밀번호 기반 인증
-  - BCrypt 비밀번호 암호화
-  - JWT 토큰 발급 및 관리
-  - 중복 이메일 검증
-  - 로그인 상태 유지 (localStorage)
+### 배포
+- **Vercel** - Frontend 호스팅
+- **Railway** - Backend 호스팅 (Spring Boot + PostgreSQL)
 
-### 🔜 예정
-- 문제 목록 및 상세
-- 코드 제출 및 채점
-- 모의고사 기능
-- AI 코드 리뷰
+---
 
-## 🛠️ 설치 및 실행
+## 🚀 빠른 시작
+
+### 🌐 배포된 서비스 바로 사용하기
+
+**CodeBrainer는 이미 배포되어 있습니다! 설치 없이 바로 사용하세요.**
+
+🔗 **Live Demo**: [code-brainer.vercel.app](https://code-brainer.vercel.app)
+
+1. 링크 접속
+2. 회원가입 / 로그인
+3. 문제 선택 및 코드 작성
+4. **AI 보조모드 ON** → AI 힌트 및 코드 리뷰 활용
+
+---
+
+## 💻 로컬 개발 환경 설정 (개발자용)
 
 ### 사전 요구사항
-- Node.js 18+ 
+- Node.js 18+
 - Java 21+
+- Docker & Docker Compose (Judge0 채점 엔진)
 - PostgreSQL 13+
-- Gradle 8+ (Wrapper 포함)
 
-### 1️⃣ PostgreSQL 데이터베이스 생성
-
+### 1️⃣ 저장소 클론
 ```bash
-# PostgreSQL 접속
-psql -U postgres
-
-# 데이터베이스 생성
-CREATE DATABASE codebrainer;
-
-# 종료
-\q
+git clone https://github.com/toranan/CodeBrainer.git
+cd CodeBrainer
 ```
 
 ### 2️⃣ 환경 변수 설정
 
-**Backend (`backend/src/main/resources/application.yml`)**
+**Frontend (`.env.local`)**
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+
+# Backend URLs (로컬 개발)
+NEXT_PUBLIC_AUTH_BACKEND_URL=http://localhost:8081
+NEXT_PUBLIC_ORCHESTRATOR_URL=http://localhost:8080
+```
+
+**Backend Orchestrator (`backend/orchestrator/src/main/resources/application.yml`)**
 ```yaml
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/codebrainer
     username: postgres
-    password: YOUR_PASSWORD  # 본인의 PostgreSQL 비밀번호
+    password: YOUR_PASSWORD
 
-jwt:
-  secret: YOUR_JWT_SECRET_KEY  # 최소 256비트
-  expiration: 86400000  # 24시간
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  
+supabase:
+  url: ${SUPABASE_URL}
+  key: ${SUPABASE_SERVICE_ROLE_KEY}
 ```
 
-**Frontend (`.env.local`)**
-```env
-DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/codebrainer"
-NEXTAUTH_SECRET="YOUR_NEXTAUTH_SECRET"
-NEXTAUTH_URL="http://localhost:3000"
-```
-
-### 3️⃣ 백엔드 실행
-
+### 3️⃣ Judge0 실행 (Docker)
 ```bash
 cd backend
+docker-compose -f docker-compose.judge0-linux.yml up -d
+```
 
-# Windows
-.\gradlew.bat bootRun
+### 4️⃣ 백엔드 실행
 
-# Mac/Linux
+**Option A: Maven (Orchestrator - 추천)**
+```bash
+cd backend/orchestrator
+./mvnw spring-boot:run
+```
+
+**Option B: Gradle (Auth Backend)**
+```bash
+cd backend/src
 ./gradlew bootRun
 ```
 
-✅ 백엔드가 `http://localhost:8080/api`에서 실행됩니다.
+> **Note**: 로컬 개발 시 Orchestrator(포트 8080)만 실행해도 대부분의 기능을 사용할 수 있습니다.
 
-### 4️⃣ 프론트엔드 실행
-
+### 5️⃣ 프론트엔드 실행
 ```bash
-# 프로젝트 루트 디렉토리
 npm install
 npm run dev
 ```
 
-✅ 프론트엔드가 `http://localhost:3000`에서 실행됩니다.
+✅ `http://localhost:3000`에서 접속 가능
 
-## 📡 API 엔드포인트
+---
 
-### 인증 (Authentication)
-
-#### 회원가입
-```http
-POST /api/auth/signup
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "name": "홍길동"
-}
-```
-
-**응답 (201 Created)**
-```json
-{
-  "id": 1,
-  "email": "user@example.com",
-  "name": "홍길동",
-  "role": "USER",
-  "createdAt": "2025-10-31T16:00:00"
-}
-```
-
-#### 로그인
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-**응답 (200 OK)**
-```json
-{
-  "userId": 1,
-  "email": "user@example.com",
-  "name": "홍길동",
-  "role": "USER",
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "type": "Bearer",
-  "loggedInAt": "2025-10-31T16:00:00"
-}
-```
-
-#### 이메일 중복 확인
-```http
-GET /api/auth/check-email?email=user@example.com
-```
-
-**응답 (200 OK)**
-```json
-{
-  "available": false,
-  "message": "이미 사용 중인 이메일입니다"
-}
-```
-
-## 🗄️ 데이터베이스 스키마
-
-### Users 테이블
-```sql
-CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    name VARCHAR(100),
-    password VARCHAR(255) NOT NULL,
-    provider VARCHAR(50),  -- 'local', 'google', 'azure-ad'
-    image VARCHAR(500),
-    role VARCHAR(20) NOT NULL,  -- 'USER', 'ADMIN'
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-## 🔒 보안
-
-- **비밀번호**: BCrypt 해싱 (솔트 자동 생성)
-- **JWT 토큰**: HS256 알고리즘, 24시간 유효
-- **CORS**: localhost:3000, localhost:3001 허용
-- **CSRF**: REST API이므로 비활성화
-- **세션**: Stateless (JWT 기반)
-
-## 📁 프로젝트 구조
+## � 프로젝트 구조
 
 ```
 CodeBrainer/
-├── backend/                    # Spring Boot 백엔드
-│   ├── src/main/java/com/codebrainer/
-│   │   ├── config/            # 설정 (Security, JWT)
-│   │   ├── controller/        # REST API 컨트롤러
-│   │   ├── dto/              # 데이터 전송 객체
-│   │   ├── entity/           # JPA 엔티티
-│   │   ├── repository/       # JPA 리포지토리
-│   │   └── service/          # 비즈니스 로직
-│   └── src/main/resources/
-│       └── application.yml   # 애플리케이션 설정
-├── src/                       # Next.js 프론트엔드
+├── src/                          # Next.js Frontend
 │   ├── app/
-│   │   ├── auth/
-│   │   │   ├── signin/       # 로그인 페이지
-│   │   │   └── signup/       # 회원가입 페이지
-│   │   └── layout.tsx        # 전역 레이아웃
+│   │   ├── problems/            # 문제 목록 및 상세
+│   │   ├── me/                  # 마이페이지
+│   │   └── api/                 # Next.js API Routes
 │   └── components/
-│       └── layout/
-│           └── header.tsx    # 헤더 컴포넌트
-├── prisma/
-│   └── schema.prisma         # Prisma 스키마
-└── README.md
+│       ├── problem/             # 코드 에디터, 제출 결과
+│       └── layout/              # 헤더, 푸터
+├── backend/
+│   ├── src/                     # Auth Backend (Spring Boot)
+│   └── orchestrator/            # Orchestrator - 채점 및 AI 서비스
+│       ├── judge0/              # Judge0 클라이언트
+│       ├── service/
+│       │   ├── JudgeService     # 코드 채점
+│       │   └── GeminiAIService  # AI 리뷰/힌트
+│       └── storage/             # Supabase Storage 연동
+└── docker-compose.judge0.yml    # Judge0 설정
 ```
 
-## 🐛 트러블슈팅
+---
 
-### 백엔드가 실행되지 않을 때
-```bash
-# Gradle 캐시 삭제
-cd backend
-.\gradlew.bat clean
+## � 보안
 
-# 다시 실행
-.\gradlew.bat bootRun
-```
+- ✅ **환경 변수 관리** - API 키 및 민감 정보는 환경 변수로 관리
+- ✅ **비밀번호 암호화** - BCrypt 해싱
+- ✅ **ORM 사용** - SQL Injection 방지
+- ✅ **CORS 설정** - 허용된 도메인만 접근 가능
 
-### 데이터베이스 연결 오류
-- PostgreSQL이 실행 중인지 확인
-- `application.yml`의 비밀번호가 올바른지 확인
-- 데이터베이스 `codebrainer`가 생성되었는지 확인
+---
 
-### 프론트엔드가 백엔드와 통신하지 못할 때
-- 백엔드가 `http://localhost:8080`에서 실행 중인지 확인
-- CORS 설정 확인 (`SecurityConfig.java`)
-- 브라우저 콘솔에서 네트워크 탭 확인
+## 🙏 오픈소스 크레딧
 
-## 👥 팀원
+이 프로젝트는 다음 오픈소스 프로젝트를 사용합니다:
 
-- **ryeong** - 백엔드 인증 시스템 개발
+- **[Judge0](https://github.com/judge0/judge0)** - MIT License
+  - 코드 실행 및 채점 엔진
+- **Google Gemini API** - AI 코드 분석 및 힌트 생성
+- **Supabase** - PostgreSQL 데이터베이스 및 Storage
+
+---
 
 ## 📝 라이선스
 
-MIT License
+MIT License - 자유롭게 사용, 수정, 배포 가능합니다.
+
+---
 
 ## 📧 문의
 
-프로젝트에 대한 문의사항은 이슈를 등록해주세요.
+- **GitHub Issues**: 버그 리포트 및 기능 제안
+- **Pull Requests**: 기여 환영합니다!
+
+---
+
+**Made with ❤️ by CodeBrainer Team**
