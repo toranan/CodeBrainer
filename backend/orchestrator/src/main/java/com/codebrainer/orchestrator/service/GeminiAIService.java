@@ -329,8 +329,8 @@ public class GeminiAIService {
      */
     private String buildHintPrompt(String code, String problemTitle, String problemStatement, String languageId, Long problemId, String verdict, List<String> categories) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("당신은 코딩 교육 AI 튜터입니다. 학생이 문제를 틀렸습니다.\n");
-        prompt.append("정답 코드는 **절대** 알려주지 말고, 스스로 해결할 수 있도록 힌트만 제공하세요.\n\n");
+        prompt.append("당신은 알고리즘 전문 코딩 튜터입니다. 학생의 코드가 틀렸습니다.\n");
+        prompt.append("**중요**: 정답 코드나 수정된 코드는 절대 제공하지 마세요. 학생이 스스로 깨달을 수 있도록 힌트만 제공하세요.\n\n");
         
         prompt.append("# 문제: ").append(problemTitle).append("\n\n");
 
@@ -342,11 +342,23 @@ public class GeminiAIService {
         
         // 알고리즘 카테고리 추가
         if (categories != null && !categories.isEmpty()) {
-            prompt.append("# 🎯 요구 알고리즘 (출제의도): ").append(String.join(", ", categories)).append("\n");
-            prompt.append("⚠️ 이 문제는 위 알고리즘을 사용해야 하는 문제입니다!\n\n");
+            prompt.append("# 🎯 요구 알고리즘 (출제의도): ").append(String.join(", ", categories)).append("\n\n");
         }
         
-        prompt.append("# 제출 결과: ").append(verdict).append("\n\n");
+        prompt.append("# 제출 결과: ").append(verdict).append("\n");
+        
+        // 제출 결과별 추가 컨텍스트
+        if ("WA".equals(verdict)) {
+            prompt.append("→ 코드는 실행되지만 출력 결과가 예상과 다릅니다.\n\n");
+        } else if ("TLE".equals(verdict)) {
+            prompt.append("→ 코드가 시간 초과되었습니다. 알고리즘 효율성을 개선해야 합니다.\n\n");
+        } else if ("RE".equals(verdict)) {
+            prompt.append("→ 런타임 에러가 발생했습니다. 예외 처리나 배열 범위 등을 확인하세요.\n\n");
+        } else if ("CE".equals(verdict)) {
+            prompt.append("→ 컴파일 에러가 발생했습니다. 문법 오류를 확인하세요.\n\n");
+        } else {
+            prompt.append("\n");
+        }
         
         prompt.append("# 학생의 제출 코드:\n```").append(languageId).append("\n");
         prompt.append(code).append("\n```\n\n");
@@ -356,28 +368,47 @@ public class GeminiAIService {
         
         if (solutionOpt.isPresent()) {
             ProblemSolution solution = solutionOpt.get();
-            prompt.append("# (참고용) 정답 코드 - **절대 사용자에게 노출 금지**:\n");
+            prompt.append("# [내부 참고용 - 절대 노출 금지] 정답 코드:\n");
             prompt.append("```").append(solution.getLanguage().toLowerCase()).append("\n");
             prompt.append(solution.getCode()).append("\n```\n\n");
+            prompt.append("⚠️ 위 정답 코드는 학생 코드와 비교 분석용입니다. 정답 코드의 내용을 직접적으로 언급하거나 힌트로 제공하지 마세요.\n\n");
         }
 
-        prompt.append("# 힌트 작성 규칙:\n");
-        prompt.append("1. **정답 코드나 구체적인 수정 코드를 절대 제공하지 마세요.**\n");
-        prompt.append("2. 학생의 코드에서 논리적 오류, 엣지 케이스 누락, 비효율적인 부분 등을 찾아 설명하세요.\n");
-        prompt.append("3. 질문 형태로 생각할 거리를 던져주는 것이 좋습니다.\n");
-        prompt.append("4. 출력 형식이 잘못되었는지도 확인해주세요.\n\n");
+        prompt.append("# 📝 힌트 작성 규칙:\n\n");
+        
+        prompt.append("## 1. 코드 분석 (필수)\n");
+        prompt.append("학생의 코드를 **한 줄씩 분석**하여 다음을 찾으세요:\n");
+        prompt.append("- 변수명, 자료구조 선택이 적절한가?\n");
+        prompt.append("- 반복문/조건문의 조건이 올바른가?\n");
+        prompt.append("- 정렬 기준, 우선순위 등이 문제 요구사항과 일치하는가?\n");
+        prompt.append("- 엣지 케이스(빈 입력, 0, 음수, 최대값 등)를 처리했는가?\n\n");
+
+        prompt.append("## 2. 구체적 힌트 제공\n");
+        prompt.append("- **코드의 특정 부분**을 언급하며 왜 그 부분이 문제인지 설명\n");
+        prompt.append("- 예: \"heapq.heappush의 튜플 순서를 다시 확인해보세요\"\n");
+        prompt.append("- 예: \"abs() 함수가 어느 위치에서 호출되나요?\"\n");
+        prompt.append("- 예: \"정렬 기준을 문제에서 요구하는 순서와 비교해보세요\"\n\n");
+
+        prompt.append("## 3. 질문 형태로 유도\n");
+        prompt.append("- 정답을 직접 알려주지 말고, 학생이 스스로 깨달을 수 있는 질문을 던지세요\n");
+        prompt.append("- 예: \"절댓값이 같을 때 어떤 값을 먼저 출력해야 하나요?\"\n");
+        prompt.append("- 예: \"현재 비교 기준은 무엇인가요? 문제에서 요구하는 비교 기준은요?\"\n\n");
+
+        prompt.append("## 4. 테스트 케이스 제안\n");
+        prompt.append("- 학생이 직접 테스트해볼 수 있는 간단한 입력 예시를 제공하세요\n");
+        prompt.append("- 예: \"입력이 [-1, 1, 0]일 때 어떻게 출력되어야 할까요?\"\n\n");
 
         prompt.append("---\n\n");
-        prompt.append("응답 형식: 반드시 아래 형식을 정확히 따라 작성하세요.\n\n");
+        prompt.append("# 응답 형식 (반드시 엄격히 준수):\n\n");
         
-        prompt.append("### 문제점 분석:\n");
-        prompt.append("- (코드의 잠재적 문제점이나 놓친 부분을 설명)\n");
-        prompt.append("- (출력 형식이나 예외 처리 관련 문제)\n\n");
+        prompt.append("## 문제점 분석\n");
+        prompt.append("- (학생 코드의 **구체적인 라인이나 로직**을 언급하며 무엇이 잘못되었는지 설명)\n");
+        prompt.append("- (최소 2-3개의 구체적인 문제점 나열)\n\n");
         
-        prompt.append("### 다시 생각해볼 점:\n");
-        prompt.append("- (알고리즘 접근 방식에 대한 질문)\n");
-        prompt.append("- (시간 복잡도나 효율성 관련 힌트)\n");
-        prompt.append("- (테스트해볼 만한 입력값 예시)\n");
+        prompt.append("## 다시 생각해볼 점\n");
+        prompt.append("- (학생이 스스로 깨달을 수 있는 **구체적인 질문**)\n");
+        prompt.append("- (테스트해볼 만한 입력값과 예상 결과 비교 질문)\n");
+        prompt.append("- (최소 2-3개의 질문 형태 힌트)\n");
 
         return prompt.toString();
     }
