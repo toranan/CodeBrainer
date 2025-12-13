@@ -340,6 +340,10 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
         await fetchAiReview(data.submissionId);
       } else {
         toast("정답이 아닙니다. 결과 패널을 확인하세요.");
+        // AI 보조모드가 켜져있으면 힌트 요청
+        if (aiAssistMode && data.submissionId) {
+          await fetchAiHint(data.submissionId, data.status);
+        }
       }
     } catch (error) {
       console.error(error);
@@ -374,6 +378,41 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
       console.error(error);
       toast.error("AI 리뷰를 받아오는 중 오류가 발생했습니다.");
       setReviewState({ status: "idle" });
+    }
+  };
+
+  // AI 힌트 요청 (AI 보조모드)
+  const fetchAiHint = async (submissionId: number, verdict: string) => {
+    toast("AI 힌트를 생성하는 중입니다...");
+    try {
+      const res = await fetch("/api/ai/hint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          submissionId,
+          userCode: currentCode,
+          language,
+          problemId: problem.id,
+          verdict,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("AI 힌트 요청에 실패했습니다.");
+      }
+
+      const hintData = await res.json();
+      // 결과에 aiHint 추가
+      setJudgeState((prev) => ({
+        ...prev,
+        result: prev.result ? { ...prev.result, aiHint: hintData } : prev.result,
+      }));
+      toast.success("AI 힌트가 준비되었습니다!");
+    } catch (error) {
+      console.error(error);
+      toast.error("AI 힌트를 받아오는 중 오류가 발생했습니다.");
     }
   };
 
