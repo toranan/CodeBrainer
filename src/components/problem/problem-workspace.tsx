@@ -513,12 +513,15 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           </div>
           <div className="flex flex-col items-end gap-2 text-right text-xs text-slate-500">
             <Button
-              variant="outline"
+              variant={aiAssistMode ? "default" : "outline"}
               size="sm"
-              onClick={() => toast("사용자 실시간 소통 AI 보조모드는 아직 준비중입니다.")}
+              onClick={() => {
+                setAiAssistMode(!aiAssistMode);
+                toast(aiAssistMode ? "AI 보조모드를 비활성화했습니다." : "AI 보조모드를 활성화했습니다. 오답 시 AI 힌트가 제공됩니다.");
+              }}
               className="mb-2"
             >
-              🤖 AI 보조모드
+              🤖 AI 보조모드 {aiAssistMode ? "ON" : "OFF"}
             </Button>
             <span>지원 언어 {problem.languages.length}종</span>
             <span>최종 수정 {new Date(problem.updatedAt).toLocaleDateString()}</span>
