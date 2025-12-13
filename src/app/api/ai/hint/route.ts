@@ -7,6 +7,8 @@ interface HintRequest {
     language: string
     problemId: string
     verdict: string
+    problemTitle?: string
+    problemStatement?: string
 }
 
 interface CodeReviewResponse {
@@ -91,6 +93,8 @@ export async function POST(request: Request) {
                     body: JSON.stringify({
                         mode: "hint",
                         verdict: body.verdict,
+                        problemTitle: body.problemTitle,
+                        problemStatement: body.problemStatement,
                     }),
                 }
             )

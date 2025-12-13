@@ -31,15 +31,22 @@ public class CodeReviewController {
      * POST /api/code-reviews/submissions/{submissionId}
      *
      * @param submissionId 제출 ID
+     * @param request 리뷰 요청 데이터
      * @return 생성된 코드 리뷰
      */
     @PostMapping("/submissions/{submissionId}")
     public ResponseEntity<?> createReview(
             @PathVariable("submissionId") Long submissionId,
-            @RequestParam(value = "mode", required = false, defaultValue = "review") String mode) {
+            @RequestBody(required = false) CreateReviewRequest request) {
         try {
+            String mode = (request != null && request.mode() != null) ? request.mode() : "review";
+            String problemTitle = (request != null) ? request.problemTitle() : null;
+            String problemStatement = (request != null) ? request.problemStatement() : null;
+            
             log.info("Generating {} for submission: {}", mode, submissionId);
-            CodeReviewResponse review = codeReviewService.generateReview(submissionId, mode);
+            CodeReviewResponse review = codeReviewService.generateReview(
+                submissionId, mode, problemTitle, problemStatement
+            );
             return ResponseEntity.status(HttpStatus.CREATED).body(review);
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("Failed to generate code review: {}", e.getMessage());
@@ -53,6 +60,17 @@ public class CodeReviewController {
             );
         }
     }
+
+    /**
+     * 리뷰 생성 요청 DTO
+     */
+    private record CreateReviewRequest(
+        String mode,
+        String verdict,
+        String problemTitle,
+        String problemStatement
+    ) {}
+
 
     /**
      * 제출에 대한 기존 코드 리뷰를 조회합니다.

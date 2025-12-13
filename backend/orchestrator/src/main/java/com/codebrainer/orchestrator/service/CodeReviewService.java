@@ -58,10 +58,12 @@ public class CodeReviewService {
      *
      * @param submissionId 제출 ID
      * @param mode "review" 또는 "hint"
+     * @param problemTitle 문제 제목 (optional, 프론트엔드에서 전달)
+     * @param problemStatement 문제 설명 (optional, 프론트엔드에서 전달)
      * @return 코드 리뷰 응답
      */
     @Transactional
-    public CodeReviewResponse generateReview(Long submissionId, String mode) {
+    public CodeReviewResponse generateReview(Long submissionId, String mode, String problemTitle, String problemStatement) {
         // 힌트 모드가 아닌 경우, 기존 로직 유지
         boolean isHintMode = "hint".equalsIgnoreCase(mode);
         
@@ -98,13 +100,20 @@ public class CodeReviewService {
         String code = readCodeFromStorage(submission.getCodePath());
         Problem problem = submission.getProblem();
 
-        // 문제 설명 읽기 (optional)
-        String problemStatement = null;
-        if (problem.getStatementPath() != null) {
-            try {
-                problemStatement = storageClient.readString(problem.getStatementPath());
-            } catch (Exception e) {
-                log.warn("Could not read problem statement: {}", e.getMessage());
+        // 문제 제목: 프론트엔드에서 받은 값 우선, 없으면 DB
+        String finalProblemTitle = (problemTitle != null && !problemTitle.isEmpty()) 
+            ? problemTitle 
+            : problem.getTitle();
+
+        // 문제 설명: 프론트엔드에서 받은 값 우선, 없으면 Storage 시도
+        String finalProblemStatement = problemStatement;
+        if (finalProblemStatement == null || finalProblemStatement.isEmpty()) {
+            if (problem.getStatementPath() != null) {
+                try {
+                    finalProblemStatement = storageClient.readString(problem.getStatementPath());
+                } catch (Exception e) {
+                    log.warn("Could not read problem statement from storage: {}", e.getMessage());
+                }
             }
         }
 
@@ -113,8 +122,8 @@ public class CodeReviewService {
         if (isHintMode) {
             reviewContent = geminiAIService.generateHint(
                     code,
-                    problem.getTitle(),
-                    problemStatement,
+                    finalProblemTitle,
+                    finalProblemStatement,
                     submission.getLanguageId(),
                     problem.getId(),
                     submission.getStatus().name(),
@@ -123,8 +132,8 @@ public class CodeReviewService {
         } else {
             reviewContent = geminiAIService.generateCodeReview(
                     code,
-                    problem.getTitle(),
-                    problemStatement,
+                    finalProblemTitle,
+                    finalProblemStatement,
                     submission.getLanguageId(),
                     problem.getId(),
                     problem.getCategories()

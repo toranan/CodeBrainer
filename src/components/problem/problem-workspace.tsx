@@ -396,6 +396,8 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
           language,
           problemId: problem.id,
           verdict,
+          problemTitle: problem.title,
+          problemStatement: problem.statement,
         }),
       });
 
