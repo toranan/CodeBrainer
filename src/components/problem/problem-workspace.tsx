@@ -694,6 +694,40 @@ export function ProblemWorkspace({ problem, initialCodeMap }: ProblemWorkspacePr
                         </pre>
                       </div>
                     ) : null}
+                    {judgeState.result.aiHint ? (
+                      <Card className="border-amber-200 bg-amber-50">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base text-amber-800">💡 AI 힌트</CardTitle>
+                          <CardDescription className="text-xs text-amber-600">
+                            AI가 분석한 문제점과 개선 힌트입니다. 정답은 직접 포함되지 않습니다.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div>
+                            <h4 className="text-sm font-semibold text-amber-800 mb-2">문제점 분석</h4>
+                            <ul className="space-y-1">
+                              {judgeState.result.aiHint.hints.map((hint, idx) => (
+                                <li key={idx} className="flex gap-2 text-sm text-amber-700">
+                                  <span className="text-amber-500">•</span>
+                                  <span>{hint}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-amber-800 mb-2">다시 생각해볼 점</h4>
+                            <ul className="space-y-1">
+                              {judgeState.result.aiHint.suggestions.map((suggestion, idx) => (
+                                <li key={idx} className="flex gap-2 text-sm text-amber-700">
+                                  <span className="text-amber-500">•</span>
+                                  <span>{suggestion}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : null}
                   </div>
                 ) : (
                   <p className="text-sm text-slate-500">

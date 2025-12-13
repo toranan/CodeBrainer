@@ -176,11 +176,13 @@ export async function POST(request: Request) {
       )
 
       // Orchestrator 응답을 프론트엔드 형식으로 변환
-      const response = formatOrchestratorResponse(orchestratorDetail, problem.testcases)
+      const responseData = formatOrchestratorResponseData(orchestratorDetail, problem.testcases)
 
-      // AI 보조모드가 활성화되어 있고, 틀렸을 때 힌트 생성
-      if (body.aiAssistMode && orchestratorDetail.status !== "COMPLETED") {
+      // AI 보조모드가 활성화되어 있고, 오답일 때 힌트 생성
+      const isWrongAnswer = responseData.status !== "AC"
+      if (body.aiAssistMode && isWrongAnswer) {
         try {
+          console.log("AI 힌트 생성 시작:", { submissionId: orchestratorDetail.submissionId, status: responseData.status })
           const hintResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai/hint`, {
             method: "POST",
             headers: {
@@ -191,17 +193,20 @@ export async function POST(request: Request) {
               userCode: body.code,
               language: languageUpper,
               problemId: body.problemId,
-              verdict: orchestratorDetail.status,
+              verdict: responseData.status,
             }),
           })
 
           if (hintResponse.ok) {
             const hintData = await hintResponse.json()
+            console.log("AI 힌트 생성 성공:", hintData)
             // 힌트를 응답에 추가
             return NextResponse.json({
-              ...response.json(), // Extract the JSON body from the NextResponse
+              ...responseData,
               aiHint: hintData,
             })
+          } else {
+            console.error("AI 힌트 API 응답 실패:", hintResponse.status)
           }
         } catch (hintError) {
           console.error("AI 힌트 생성 오류:", hintError)
@@ -209,7 +214,7 @@ export async function POST(request: Request) {
         }
       }
 
-      return response
+      return NextResponse.json(responseData)
     } catch (error) {
       console.error("Orchestrator 제출 오류:", error)
       return NextResponse.json(
@@ -290,6 +295,75 @@ export async function POST(request: Request) {
       },
       { status: 500 },
     )
+  }
+}
+
+// Orchestrator 응답을 프론트엔드 형식의 데이터로 변환 (NextResponse 없이)
+function formatOrchestratorResponseData(
+  detail: OrchestratorSubmissionDetail,
+  testcases: Array<{ id: string }>,
+) {
+  if (!detail.result) {
+    return {
+      status: detail.status,
+      results: [],
+      compileLog: null,
+      submissionId: detail.submissionId,
+    }
+  }
+
+  // JSON 문자열 파싱
+  type TestResult = {
+    testcaseId?: string
+    verdict?: string
+    timeMs?: number
+    memoryKb?: number
+    stderr?: string
+    stdout?: string
+  }
+
+  let tests: TestResult[] = []
+
+  try {
+    tests = typeof detail.result.tests === "string"
+      ? JSON.parse(detail.result.tests)
+      : detail.result.tests
+  } catch (e) {
+    console.error("결과 파싱 오류:", e)
+  }
+
+  // 테스트 결과 매핑
+  const results = tests.map((test: TestResult, index: number) => {
+    const testcaseId = test.testcaseId ?? testcases[index]?.id ?? `test-${index + 1}`
+    return {
+      testcaseId,
+      verdict: test.verdict ?? "PENDING",
+      timeMs: test.timeMs ?? 0,
+      memoryKb: test.memoryKb ?? 0,
+      stderr: test.stderr ?? undefined,
+      stdout: test.stdout ?? undefined,
+    }
+  })
+
+  // 최종 상태 결정
+  let finalStatus = "AC"
+  if (!detail.result.compile.ok) {
+    finalStatus = "CE"
+  } else if (results.some((r) => r.verdict === "WA")) {
+    finalStatus = "WA"
+  } else if (results.some((r) => r.verdict === "TLE")) {
+    finalStatus = "TLE"
+  } else if (results.some((r) => r.verdict === "RE")) {
+    finalStatus = "RE"
+  } else if (results.some((r) => r.verdict === "MLE")) {
+    finalStatus = "MLE"
+  }
+
+  return {
+    status: finalStatus,
+    results,
+    compileLog: detail.result.compile.message ?? undefined,
+    submissionId: detail.submissionId,
   }
 }
 
