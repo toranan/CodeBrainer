@@ -183,7 +183,13 @@ export async function POST(request: Request) {
       if (body.aiAssistMode && isWrongAnswer) {
         try {
           console.log("AI 힌트 생성 시작:", { submissionId: orchestratorDetail.submissionId, status: responseData.status })
-          const hintResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/ai/hint`, {
+
+          // 상대 경로 사용 (Vercel에서 localhost 문제 해결)
+          const baseUrl = request.headers.get('host')
+            ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`
+            : '';
+
+          const hintResponse = await fetch(`${baseUrl}/api/ai/hint`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
