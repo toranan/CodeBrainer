@@ -47,7 +47,7 @@ CodeBrainer는 알고리즘 문제 풀이, 실시간 채점, AI 코드 리뷰 �
 - **Supabase Storage** - 문제 파일 및 테스트 케이스 저장
 
 ### 코드 채점 & AI
-- **[Judge0](https://github.com/judge0/judge0)** (MIT License) - 코드 실행 및 채점 엔진
+- **[Judge0](https://github.com/judge0/judge0)** (GPL v3.0) - 코드 실행 및 채점 엔진
 - **Google Gemini API** - AI 코드 리뷰 및 힌트 생성
 
 ### 배포
@@ -184,8 +184,8 @@ CodeBrainer/
 
 이 프로젝트는 다음 오픈소스 프로젝트를 사용합니다:
 
-- **[Judge0](https://github.com/judge0/judge0)** - MIT License
-  - 코드 실행 및 채점 엔진
+- **[Judge0](https://github.com/judge0/judge0)** - GPL v3.0
+  - 코드 실행 및 채점 엔진 (REST API로 사용)
 - **Google Gemini API** - AI 코드 분석 및 힌트 생성
 - **Supabase** - PostgreSQL 데이터베이스 및 Storage
 
